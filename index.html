@@ -7,8 +7,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Journi</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=546de53c306a839dfeb7702be1bfe856&libraries=services"></script>
 <style>
 /* ═══════════════════════════════
    DESIGN TOKENS
@@ -880,99 +878,6 @@ body {
 .fl-dots span:nth-child(3) { animation-delay:.4s; opacity:.3; }
 @keyframes dp { 0%,80%,100%{transform:scale(0.6)} 40%{transform:scale(1.2)} }
 
-
-/* ═══════════════════════════════
-   KAKAO MAP & AUTOCOMPLETE
-═══════════════════════════════ */
-.kakao-map-wrap {
-  position:relative;
-  border-radius:var(--r) var(--r) 0 0;
-  overflow:hidden;
-  background:var(--surface-2);
-  margin:-20px -20px 20px;
-}
-#kakaoMap {
-  width:100%; height:220px;
-  display:block;
-}
-.map-loading {
-  width:100%; height:220px;
-  display:flex; align-items:center; justify-content:center;
-  background:var(--surface-2);
-  font-size:13px; color:var(--ink-3); font-weight:500;
-  flex-direction:column; gap:10px;
-}
-.map-spinner {
-  width:24px; height:24px; border-radius:50%;
-  border:3px solid var(--border-2);
-  border-top-color:var(--brand);
-  animation:spin .8s linear infinite;
-}
-@keyframes spin { to{transform:rotate(360deg)} }
-
-.map-day-legend {
-  background:#fff; padding:10px 16px;
-  display:flex; align-items:center; gap:6px;
-  border-bottom:1px solid var(--border);
-  font-size:12px; color:var(--ink-3); font-weight:600;
-  flex-wrap:wrap;
-}
-.legend-item {
-  display:flex; align-items:center; gap:4px;
-  font-size:11px; font-weight:600;
-}
-.legend-dot {
-  width:8px; height:8px; border-radius:50%;
-}
-
-/* Distance badge between events */
-.dist-badge {
-  display:flex; align-items:center; justify-content:center;
-  gap:6px; padding:6px 0;
-  margin-bottom:4px;
-}
-.dist-line {
-  flex:1; height:1px; background:var(--border);
-}
-.dist-pill {
-  display:inline-flex; align-items:center; gap:4px;
-  background:var(--surface-2); border:1px solid var(--border);
-  border-radius:20px; padding:3px 10px;
-  font-size:11px; font-weight:600; color:var(--ink-3);
-  flex-shrink:0;
-}
-
-/* Autocomplete */
-.addr-field-wrap { position:relative; margin-bottom:12px; }
-.kakao-autocomplete {
-  position:absolute; top:100%; right:0; left:0;
-  background:#fff; border:1.5px solid var(--brand);
-  border-top:none; border-radius:0 0 var(--r-sm) var(--r-sm);
-  box-shadow:var(--sh-md); z-index:2000;
-  max-height:220px; overflow-y:auto;
-}
-.kac-item {
-  padding:11px 14px; cursor:pointer;
-  border-bottom:1px solid var(--border);
-  transition:background .1s;
-}
-.kac-item:last-child { border-bottom:none; }
-.kac-item:hover { background:var(--brand-light); }
-.kac-name { font-size:13.5px; font-weight:600; color:var(--ink); }
-.kac-addr { font-size:11.5px; color:var(--ink-3); margin-top:2px; }
-.kac-empty { padding:16px; text-align:center; font-size:13px; color:var(--ink-3); }
-.kakao-map-btn {
-  display:inline-flex; align-items:center; gap:6px;
-  background:#FFDE00; color:#3C1E1E;
-  padding:9px 14px; border-radius:10px;
-  font-size:12.5px; font-weight:800;
-  border:none; cursor:pointer; margin-top:10px;
-  transition:all .15s;
-  box-shadow:0 3px 10px rgba(255,222,0,0.4);
-  font-family:'Inter',sans-serif;
-}
-.kakao-map-btn:active { transform:scale(0.96); }
-
 /* UTILS */
 .reveal { opacity:0; transform:translateY(12px); transition:opacity .5s ease,transform .5s var(--ease); }
 .reveal.visible { opacity:1; transform:translateY(0); }
@@ -981,7 +886,7 @@ body {
 <body>
 
 <!-- LOADER -->
-<div class="full-loader" id="loader" style="display:none">
+<div class="full-loader" id="loader">
   <div class="fl-logo">Journ<span>i</span></div>
   <div class="fl-dots"><span></span><span></span><span></span></div>
 </div>
@@ -1000,7 +905,7 @@ body {
 </div>
 
 <!-- ════════ LANDING ════════ -->
-<div class="screen" id="screen-landing" style="display:flex">
+<div class="screen active" id="screen-landing">
   <div class="landing-photo-stack">
     <div class="landing-logo-top">
       <div class="landing-logo-icon">✈️</div>
@@ -1032,31 +937,16 @@ body {
   <div class="landing-bottom">
     <div class="landing-tagline">כל מסע מתחיל<br>ב<span>רגע אחד</span></div>
     <div class="landing-desc">בנה לוז מפורט, שתף עם בן/בת הזוג בזמן אמת, וגלה יעדים שאחרים אוהבים.</div>
-    <!-- Auth tabs -->
-    <div style="display:flex;border:1.5px solid var(--border);border-radius:var(--r-sm);margin-bottom:20px;overflow:hidden">
-      <button id="tabLogin" onclick="switchTab('login')"
-        style="flex:1;padding:11px;font-size:14px;font-weight:700;font-family:Inter,sans-serif;border:none;background:var(--ink);color:#fff;cursor:pointer">
-        כניסה
-      </button>
-      <button id="tabRegister" onclick="switchTab('register')"
-        style="flex:1;padding:11px;font-size:14px;font-weight:700;font-family:Inter,sans-serif;border:none;background:#fff;color:var(--ink-3);cursor:pointer">
-        הרשמה
-      </button>
-    </div>
-
-    <input id="authEmail" type="email" placeholder="אימייל"
-      style="width:100%;border:1.5px solid var(--border);border-radius:var(--r-sm);padding:14px 16px;font-size:15px;font-family:Inter,sans-serif;outline:none;margin-bottom:10px;direction:ltr;text-align:left">
-
-    <input id="authPassword" type="password" placeholder="סיסמה (לפחות 6 תווים)"
-      style="width:100%;border:1.5px solid var(--border);border-radius:var(--r-sm);padding:14px 16px;font-size:15px;font-family:Inter,sans-serif;outline:none;margin-bottom:16px;direction:ltr;text-align:left">
-
-    <div id="authError" style="display:none;background:#FFF1F3;border:1px solid rgba(244,63,94,0.2);border-radius:10px;padding:10px 14px;font-size:13px;color:#F43F5E;margin-bottom:12px;text-align:right"></div>
-
-    <button id="authBtn" onclick="doAuth()"
-      style="width:100%;background:var(--ink);color:#fff;border:none;border-radius:var(--r);padding:17px;font-size:16px;font-weight:700;font-family:Inter,sans-serif;cursor:pointer;box-shadow:0 4px 20px rgba(13,14,20,0.25)">
-      כניסה
+    <button class="google-btn" onclick="signInGoogle()">
+      <svg class="g-icon" viewBox="0 0 24 24">
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+      </svg>
+      המשך עם Google
     </button>
-    <div class="landing-terms" style="margin-top:16px">בהרשמה אתה מסכים ל<a href="#">תנאי השימוש</a></div>
+    <div class="landing-terms">בהתחברות אתה מסכים ל<a href="#">תנאי השימוש</a></div>
   </div>
 </div>
 
@@ -1171,16 +1061,7 @@ body {
   <div style="overflow-y:auto;flex:1">
     <!-- SCHEDULE -->
     <div class="tab-pane active" id="tab-schedule">
-    <!-- KAKAO MAP -->
-    <div class="kakao-map-wrap" id="mapWrap">
-      <div class="map-loading" id="mapLoading">
-        <div class="map-spinner"></div>
-        <span>טוען מפה...</span>
-      </div>
-      <div id="kakaoMap" style="display:none"></div>
-      <div class="map-day-legend" id="mapLegend" style="display:none"></div>
-    </div>
-          <div class="day-pills" id="dayPills"></div>
+      <div class="day-pills" id="dayPills"></div>
       <div class="timeline" id="tlBody"></div>
       <button class="add-event-btn" id="addEvBtn" onclick="openAddEvent()">+ הוסף אירוע ליום</button>
     </div>
@@ -1272,15 +1153,8 @@ body {
     <input class="field-input" id="evName" placeholder="שם המקום" style="margin-bottom:12px">
     <label class="field-label">תיאור</label>
     <textarea class="field-textarea" id="evDesc" placeholder="תיאור מפורט..." style="margin-bottom:12px"></textarea>
-    <label class="field-label">חיפוש מיקום (Kakao)</label>
-    <div class="addr-field-wrap">
-      <input class="field-input" id="evAddr" placeholder="חפש מקום... לדוגמה: 명동" autocomplete="off"
-        oninput="kakaoSearch(this.value)" onfocus="kakaoSearch(this.value)">
-      <div class="kakao-autocomplete" id="kacDropdown" style="display:none"></div>
-    </div>
-    <div id="evPlaceInfo" style="display:none;font-size:11.5px;color:var(--ink-3);margin-bottom:12px;padding:8px 12px;background:var(--brand-light);border-radius:8px;border:1px solid rgba(59,110,245,0.2)">
-      📍 <span id="evPlaceInfoTxt"></span>
-    </div>
+    <label class="field-label">כתובת / שם למפה</label>
+    <input class="field-input" id="evAddr" placeholder="לדוגמה: Myeongdong Seoul" style="margin-bottom:12px">
     <label class="field-label">איך מגיעים</label>
     <textarea class="field-textarea" id="evHow" placeholder="מטרו / מונית / הליכה..." style="margin-bottom:12px"></textarea>
     <label class="field-label">אזהרה</label>
@@ -1331,9 +1205,350 @@ body {
 </div>
 
 <!-- FIREBASE -->
-<script>
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import{getAuth,signInWithPopup,GoogleAuthProvider,signOut as fbSO,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import{getDatabase,ref,set,get,push,onValue,off,remove,update}from"https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-// ── UI helpers (defined first so module can use them) ──
+const cfg={
+  apiKey:"AIzaSyDEvGcq2Q4Strv1NyexnhToz6rUKwOHe9Y",
+  authDomain:"trip-planner-il.firebaseapp.com",
+  databaseURL:"https://trip-planner-il-default-rtdb.firebaseio.com",
+  projectId:"trip-planner-il",
+  storageBucket:"trip-planner-il.firebasestorage.app",
+  messagingSenderId:"573417227949",
+  appId:"1:573417227949:web:f69e2e7e848e41ef946824"
+};
+
+const fbApp=initializeApp(cfg);
+const auth=getAuth(fbApp);
+const db=getDatabase(fbApp);
+const provider=new GoogleAuthProvider();
+provider.setCustomParameters({prompt:'select_account',hl:'iw'});
+
+let CU=null,CTripId=null,CTrip=null,CDayIdx=0,EvCtx=null;
+
+// ── AUTH ──
+window.signInGoogle=async()=>{
+  try{await signInWithPopup(auth,provider);}
+  catch(e){if(e.code!=='auth/popup-closed-by-user')showToast('שגיאה בהתחברות');}
+};
+window.doSignOut=async()=>{closeMenus();await fbSO(auth);showScreen('landing');showToast('התנתקת');};
+
+onAuthStateChanged(auth,async user=>{
+  if(user){
+    CU=user;
+    await set(ref(db,`users/${user.uid}`),{name:user.displayName,email:user.email,photo:user.photoURL||'',lastSeen:Date.now()});
+    setupHome(user);
+    const p=new URLSearchParams(window.location.search);
+    const shared=p.get('trip');
+    if(shared){window.history.replaceState({},'',window.location.pathname);await openTrip(shared);}
+    else showScreen('home');
+  }else{CU=null;showScreen('landing');}
+  hideLoader();
+});
+
+// ── HOME ──
+function setupHome(u){
+  document.getElementById('greetName').textContent=u.displayName?.split(' ')[0]||'חבר';
+  buildAvatar(u);
+  document.getElementById('pmName').textContent=u.displayName||'';
+  document.getElementById('pmEmail').textContent=u.email||'';
+  loadTrips();
+}
+function buildAvatar(u){
+  const el=document.getElementById('avatarWrap');
+  if(u.photoURL){
+    el.innerHTML=`<div class="avatar-btn" onclick="toggleMenu()"><img src="${u.photoURL}"></div>`;
+  }else{
+    const i=(u.displayName||'U').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    el.innerHTML=`<div class="avatar-btn" onclick="toggleMenu()">${i}</div>`;
+  }
+}
+function loadTrips(){
+  onValue(ref(db,`userTrips/${CU.uid}`),snap=>{
+    const data=snap.val()||{};
+    const ids=Object.keys(data);
+    document.getElementById('tripsCount').textContent=ids.length?`${ids.length} טיולים`:'';
+    if(!ids.length){
+      document.getElementById('tripsList').innerHTML=`<div class="empty-state"><div class="empty-icon">🗺️</div><div class="empty-title">עדיין אין טיולים</div><div class="empty-desc">לחץ על "טיול חדש" כדי להתחיל</div></div>`;
+      return;
+    }
+    Promise.all(ids.map(id=>get(ref(db,`trips/${id}`)).then(s=>({id,d:s.val()})))).then(trips=>{
+      trips.sort((a,b)=>(b.d?.createdAt||0)-(a.d?.createdAt||0));
+      document.getElementById('tripsList').innerHTML=trips.map(({id,d})=>{
+        if(!d)return'';
+        const ev=d.days?Object.values(d.days).reduce((s,x)=>s+(x.events?Object.keys(x.events).length:0),0):0;
+        const days=d.startDate&&d.endDate?Math.round((new Date(d.endDate)-new Date(d.startDate))/86400000)+1:0;
+        const shared=d.collaborators&&Object.keys(d.collaborators).length>1;
+        return`<div class="trip-card reveal" onclick="openTrip('${id}')">
+          <div class="tc-emoji-wrap">${d.emoji||'✈️'}</div>
+          <div class="tc-body">
+            <div class="tc-name">${d.name||'טיול ללא שם'}</div>
+            <div class="tc-meta">
+              ${d.destination?`<span class="tc-chip">📍 ${d.destination}</span>`:''}
+              ${days?`<span class="tc-chip">🗓️ ${days} ימים</span>`:''}
+              <span class="tc-chip">📌 ${ev}</span>
+              ${shared?'<span class="tc-chip tc-shared">👥 משותף</span>':''}
+            </div>
+          </div>
+          <div class="tc-arrow">›</div>
+        </div>`;
+      }).join('');
+      setTimeout(initReveal,100);
+    });
+  });
+}
+
+// ── NEW TRIP ──
+window.showNewTrip=()=>{
+  const EMOJIS=['✈️','🗺️','🏖️','🏔️','🗼','🎌','🌸','🌊','🏝️','🌍','🇯🇵','🇰🇷','🇹🇭','🇮🇹','🇫🇷','🇺🇸','🌆','🎭','🎪','🎡','🎢','🍜','🍣','🥘','🏄','🎿','🚂','🚢'];
+  document.getElementById('emojiGrid').innerHTML=EMOJIS.map((e,i)=>`<div class="ep-item ${i===0?'sel':''}" onclick="pickEmoji('${e}',this)">${e}</div>`).join('');
+  showScreen('new-trip');
+};
+window.pickEmoji=(e,el)=>{document.querySelectorAll('.ep-item').forEach(x=>x.classList.remove('sel'));el.classList.add('sel');};
+
+window.createTrip=async()=>{
+  const emoji=document.querySelector('.ep-item.sel')?.textContent||'✈️';
+  const name=document.getElementById('newTripName').value.trim();
+  const dest=document.getElementById('newTripDest').value.trim();
+  const start=document.getElementById('newTripStart').value;
+  const end=document.getElementById('newTripEnd').value;
+  if(!name){showToast('אנא הכנס שם לטיול');return;}
+  const tr=push(ref(db,'trips'));
+  const id=tr.key;
+  await set(tr,{id,name,emoji,destination:dest,startDate:start,endDate:end,createdAt:Date.now(),createdBy:CU.uid,collaborators:{[CU.uid]:{name:CU.displayName,role:'owner',joinedAt:Date.now()}},days:{},notes:''});
+  await set(ref(db,`userTrips/${CU.uid}/${id}`),true);
+  ['newTripName','newTripDest','newTripStart','newTripEnd'].forEach(x=>document.getElementById(x).value='');
+  showToast('✓ הטיול נוצר!');
+  await openTrip(id);
+};
+
+// ── OPEN TRIP ──
+async function openTrip(id){
+  CTripId=id;CDayIdx=0;
+  const s=await get(ref(db,`trips/${id}`));
+  CTrip=s.val();if(!CTrip){showToast('טיול לא נמצא');return;}
+  if(!CTrip.collaborators?.[CU.uid]){
+    await update(ref(db,`trips/${id}/collaborators/${CU.uid}`),{name:CU.displayName,role:'viewer',joinedAt:Date.now()});
+    await set(ref(db,`userTrips/${CU.uid}/${id}`),true);
+  }
+  off(ref(db,`trips/${id}`));
+  onValue(ref(db,`trips/${id}`),snap=>{CTrip=snap.val();if(CTrip)renderTripDetail();});
+  const url=`${location.origin}${location.pathname}?trip=${id}`;
+  document.getElementById('shareUrl').textContent=url;
+  showScreen('trip');
+}
+window.openTrip=openTrip;
+
+function renderTripDetail(){
+  const t=CTrip;
+  document.getElementById('tdEmoji').textContent=t.emoji||'✈️';
+  document.getElementById('tdName').textContent=t.name||'—';
+  document.getElementById('tdDest').textContent=t.destination||'יעד לא הוגדר';
+  const s=t.startDate?fmtDate(t.startDate):'';
+  const e=t.endDate?fmtDate(t.endDate):'';
+  document.getElementById('tdDates').textContent=s&&e?`${s} – ${e}`:s||'תאריכים לא הוגדרו';
+  renderDayPills();renderSchedule();renderNotes();renderCollabs();
+}
+function fmtDate(d){const[y,m,day]=d.split('-');return`${day}.${m}.${y}`;}
+
+// ── DAYS ──
+function getDays(){
+  const t=CTrip;
+  if(!t?.startDate||!t?.endDate)return[{lbl:'יום 1',day:'א׳',key:'day_0'}];
+  const start=new Date(t.startDate),end=new Date(t.endDate),days=[];
+  const WD=['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
+  for(let d=new Date(start);d<=end;d.setDate(d.getDate()+1)){
+    const dd=String(d.getDate()).padStart(2,'0'),mm=String(d.getMonth()+1).padStart(2,'0');
+    days.push({lbl:`${dd}.${mm}`,day:WD[d.getDay()],key:`day_${days.length}`});
+  }
+  return days;
+}
+function renderDayPills(){
+  const days=getDays();
+  document.getElementById('dayPills').innerHTML=days.map((d,i)=>`
+    <div class="day-pill ${i===CDayIdx?'active':''}" onclick="selDay(${i})">
+      <span class="dp-num">${d.lbl}</span>
+      <span class="dp-day">${d.day}</span>
+      <span class="dp-lbl">יום ${i+1}</span>
+    </div>`).join('');
+}
+window.selDay=i=>{CDayIdx=i;renderDayPills();renderSchedule();};
+
+const TAGS={
+  sight:{p:'pill-sight',l:'📍 אטרקציה'},
+  food:{p:'pill-food',l:'🍽️ אוכל'},
+  sleep:{p:'pill-sleep',l:'🏨 מלון'},
+  shop:{p:'pill-shop',l:'🛍️ קניות'},
+  night:{p:'pill-night',l:'🌙 לילה'},
+  move:{p:'pill-move',l:'🚇 נסיעה'},
+};
+
+function renderSchedule(){
+  const days=getDays(),dk=days[CDayIdx]?.key||'day_0';
+  const evs=CTrip?.days?.[dk]?.events||{};
+  const sorted=Object.entries(evs).sort(([,a],[,b])=>(a.time||'').localeCompare(b.time||''));
+  const body=document.getElementById('tlBody');
+  document.getElementById('addEvBtn').onclick=()=>openAddEvent(dk);
+  if(!sorted.length){
+    body.innerHTML=`<div class="empty-state" style="border:1.5px dashed var(--border-2)">
+      <div class="empty-icon">📅</div>
+      <div class="empty-title">אין אירועים ביום הזה</div>
+      <div class="empty-desc">לחץ + כדי להוסיף</div>
+    </div>`;
+    return;
+  }
+  body.innerHTML=sorted.map(([evId,ev],i)=>`
+    <div class="tl-item" style="animation-delay:${i*.04}s">
+      <div class="tl-dot"></div>
+      <div class="tl-card" onclick="toggleEv(this)">
+        <div class="tl-top">
+          <span class="tl-time">${ev.time||'--:--'}</span>
+          <span class="tl-emoji">${ev.emoji||'📍'}</span>
+          <span class="tl-name">${ev.name||'—'}</span>
+          <span class="tl-chevron">›</span>
+        </div>
+        <div class="tl-tags"><span class="pill ${TAGS[ev.tag]?.p||'pill-sight'}">${TAGS[ev.tag]?.l||'📍 אטרקציה'}</span></div>
+        <div class="tl-body">
+          ${ev.desc?`<div class="tl-desc">${ev.desc}</div>`:''}
+          ${ev.how?`<div class="info-block ib-nav"><div class="info-lbl">🚇 איך מגיעים</div><div class="info-text">${ev.how}</div></div>`:''}
+          ${ev.warn?`<div class="info-block ib-warn"><div class="info-lbl">⚠️ אזהרה</div><div class="info-text">${ev.warn}</div></div>`:''}
+          ${ev.tip?`<div class="info-block ib-tip"><div class="info-lbl">💡 טיפ</div><div class="info-text">${ev.tip}</div></div>`:''}
+          ${ev.addr?`<button class="naver-btn" onclick="event.stopPropagation();naverMap('${esc(ev.addr)}')">📍 פתח ב-Naver Map</button>`:''}
+          <div class="event-acts">
+            <button class="ev-act edit" onclick="event.stopPropagation();openEditEvent('${dk}','${evId}')">✏️ ערוך</button>
+            <button class="ev-act del" onclick="event.stopPropagation();delEvById('${dk}','${evId}')">🗑️ מחק</button>
+          </div>
+        </div>
+      </div>
+    </div>`).join('');
+}
+window.toggleEv=el=>{el.classList.toggle('open');el.querySelector('.tl-body').classList.toggle('show');};
+
+// ── EVENTS ──
+window.openAddEvent=(dk)=>{
+  EvCtx={dk,evId:null};
+  document.getElementById('evSheetTitle').textContent='הוסף אירוע';
+  document.getElementById('evDelBtn').style.display='none';
+  ['evTime','evEmoji','evName','evDesc','evAddr','evHow','evWarn','evTip'].forEach(x=>document.getElementById(x).value='');
+  document.getElementById('evTag').value='sight';
+  document.getElementById('olEvent').classList.add('show');
+};
+window.openEditEvent=(dk,evId)=>{
+  const ev=CTrip.days[dk]?.events?.[evId];if(!ev)return;
+  EvCtx={dk,evId};
+  document.getElementById('evSheetTitle').textContent='ערוך אירוע';
+  document.getElementById('evDelBtn').style.display='';
+  document.getElementById('evTime').value=ev.time||'';
+  document.getElementById('evEmoji').value=ev.emoji||'';
+  document.getElementById('evName').value=ev.name||'';
+  document.getElementById('evDesc').value=ev.desc||'';
+  document.getElementById('evAddr').value=ev.addr||'';
+  document.getElementById('evHow').value=ev.how||'';
+  document.getElementById('evWarn').value=ev.warn||'';
+  document.getElementById('evTip').value=ev.tip||'';
+  document.getElementById('evTag').value=ev.tag||'sight';
+  document.getElementById('olEvent').classList.add('show');
+};
+window.saveEvent=async()=>{
+  if(!EvCtx)return;
+  const ev={time:document.getElementById('evTime').value||'00:00',emoji:document.getElementById('evEmoji').value||'📍',name:document.getElementById('evName').value||'אירוע',desc:document.getElementById('evDesc').value,addr:document.getElementById('evAddr').value,how:document.getElementById('evHow').value,warn:document.getElementById('evWarn').value,tip:document.getElementById('evTip').value,tag:document.getElementById('evTag').value};
+  if(EvCtx.evId)await update(ref(db,`trips/${CTripId}/days/${EvCtx.dk}/events/${EvCtx.evId}`),ev);
+  else{const r=push(ref(db,`trips/${CTripId}/days/${EvCtx.dk}/events`));await set(r,ev);}
+  closeOlDirect('olEvent');showToast('✓ נשמר');
+};
+window.deleteEvent=()=>{if(EvCtx?.evId)delEvById(EvCtx.dk,EvCtx.evId);closeOlDirect('olEvent');};
+window.delEvById=async(dk,evId)=>{if(!confirm('למחוק?'))return;await remove(ref(db,`trips/${CTripId}/days/${dk}/events/${evId}`));showToast('✓ נמחק');};
+
+// ── NOTES / SHARE ──
+function renderNotes(){document.getElementById('notesTA').value=CTrip?.notes||'';}
+window.saveNotes=async()=>{await update(ref(db,`trips/${CTripId}`),{notes:document.getElementById('notesTA').value});showToast('✓ הערות נשמרו');};
+window.copyLink=()=>{navigator.clipboard.writeText(document.getElementById('shareUrl').textContent).then(()=>showToast('✓ קישור הועתק!'));};
+window.doShareBtn=()=>showTabFn('share',document.querySelectorAll('.tn-btn')[2]);
+
+function renderCollabs(){
+  const cl=CTrip?.collaborators||{};
+  const items=Object.entries(cl);
+  document.getElementById('collabList').innerHTML=items.length?items.map(([uid,c])=>`
+    <div class="collab-row">
+      <div class="collab-av">${(c.name||'?')[0]}</div>
+      <div>
+        <div class="collab-name">${c.name||'משתמש'}</div>
+        <div class="collab-role">${c.role==='owner'?'בעלים':'משתתף'}</div>
+      </div>
+      <span class="role-badge ${c.role==='owner'?'rb-owner':'rb-viewer'}">${c.role==='owner'?'👑 בעלים':'👤 משתתף'}</span>
+    </div>`).join(''):'<div style="font-size:13px;color:var(--ink-3)">אין משתתפים נוספים</div>';
+}
+
+// ── EDIT / DELETE TRIP ──
+window.editTrip=()=>{
+  const t=CTrip;
+  document.getElementById('etName').value=t.name||'';
+  document.getElementById('etDest').value=t.destination||'';
+  document.getElementById('etStart').value=t.startDate||'';
+  document.getElementById('etEnd').value=t.endDate||'';
+  document.getElementById('olEditTrip').classList.add('show');
+};
+window.saveEditTrip=async()=>{
+  await update(ref(db,`trips/${CTripId}`),{name:document.getElementById('etName').value,destination:document.getElementById('etDest').value,startDate:document.getElementById('etStart').value,endDate:document.getElementById('etEnd').value});
+  closeOlDirect('olEditTrip');showToast('✓ עודכן');
+};
+window.deleteTrip=async()=>{
+  if(!confirm(`למחוק "${CTrip?.name}"?`))return;
+  await remove(ref(db,`trips/${CTripId}`));
+  await remove(ref(db,`userTrips/${CU.uid}/${CTripId}`));
+  showScreen('home');showToast('✓ הטיול נמחק');
+};
+
+// ── ADMIN ──
+window.goAdmin=async()=>{
+  closeMenus();
+  const[tSnap,uSnap]=await Promise.all([get(ref(db,'trips')),get(ref(db,'users'))]);
+  const trips=tSnap.val()||{},users=uSnap.val()||{};
+  const tripList=Object.entries(trips);
+  document.getElementById('sTotal').textContent=tripList.length;
+  document.getElementById('sUsers').textContent=Object.keys(users).length;
+  const today=new Date().setHours(0,0,0,0);
+  document.getElementById('sToday').textContent=tripList.filter(([,t])=>(t.createdAt||0)>=today).length;
+  let totalEv=0;
+  tripList.forEach(([,t])=>{if(t.days)Object.values(t.days).forEach(d=>{if(d.events)totalEv+=Object.keys(d.events).length;});});
+  document.getElementById('sEvents').textContent=totalEv;
+  const sorted=tripList.sort(([,a],[,b])=>(b.createdAt||0)-(a.createdAt||0));
+  document.getElementById('adminList').innerHTML=sorted.map(([id,t])=>{
+    const ev=t.days?Object.values(t.days).reduce((s,d)=>s+(d.events?Object.keys(d.events).length:0),0):0;
+    const cl=t.collaborators?Object.keys(t.collaborators).length:1;
+    const cr=t.createdAt?new Date(t.createdAt).toLocaleDateString('he-IL'):'—';
+    return`<div class="admin-card" onclick="openTrip('${id}');showScreen('trip')">
+      <div class="ac-top">
+        <span class="ac-emoji">${t.emoji||'✈️'}</span>
+        <span class="ac-name">${t.name||'ללא שם'}</span>
+        <span class="ac-date">${cr}</span>
+      </div>
+      <div class="ac-chips">
+        <span class="ac-chip chip-users">👥 ${cl}</span>
+        <span class="ac-chip chip-events">📌 ${ev} אירועים</span>
+        ${cl>1?'<span class="ac-chip chip-shared">✓ משותף</span>':''}
+      </div>
+    </div>`;
+  }).join('')||'<div style="text-align:center;padding:32px;color:var(--ink-3)">אין טיולים</div>';
+  showScreen('admin');
+};
+
+// ── MAP ──
+window.naverMap=q=>{
+  const enc=encodeURIComponent(q);
+  if(/Android|iPhone|iPad/i.test(navigator.userAgent)){
+    location.href=`nmap://search?query=${enc}&appname=journi`;
+    setTimeout(()=>window.open(`https://www.google.com/maps/search/${enc}`,'_blank'),1500);
+  }else window.open(`https://map.naver.com/v5/search/${enc}`,'_blank');
+};
+
+function esc(s){return String(s).replace(/'/g,"\\'").replace(/"/g,'&quot;');}
+</script>
+
+<script>
+// ── UI helpers ──
 function showScreen(n){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-'+n).classList.add('active');
@@ -1355,31 +1570,31 @@ function toggleMenu(){document.getElementById('profileMenu').classList.toggle('s
 window.toggleMenu=toggleMenu;
 function closeMenus(){document.getElementById('profileMenu').classList.remove('show');}
 window.closeMenus=closeMenus;
-document.addEventListener('click',ev=>{
+document.addEventListener('click',e=>{
   const m=document.getElementById('profileMenu');
-  if(m&&m.classList.contains('show')&&!m.contains(ev.target)&&!ev.target.closest('#avatarWrap'))
-    m.classList.remove('show');
+  if(m.classList.contains('show')&&!m.contains(e.target)&&!e.target.closest('#avatarWrap'))m.classList.remove('show');
 });
+
 function closeOl(e,id){if(e.target.id===id)closeOlDirect(id);}
 window.closeOl=closeOl;
 function closeOlDirect(id){document.getElementById(id).classList.remove('show');}
 window.closeOlDirect=closeOlDirect;
 
+// TOAST
 let tT;
 function showToast(msg){
   const t=document.getElementById('toast');
-  if(!t)return;
   t.textContent=msg;t.classList.add('show');
   clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('show'),2800);
 }
 window.showToast=showToast;
 
-function hideLoader(){
-  const l=document.getElementById('loader');
-  if(l){l.classList.add('hide');setTimeout(()=>{if(l)l.style.display='none';},400);}
-}
+// LOADER
+function hideLoader(){const l=document.getElementById('loader');l.classList.add('hide');setTimeout(()=>l.style.display='none',400);}
 window.hideLoader=hideLoader;
+setTimeout(hideLoader,5000);
 
+// REVEAL
 function initReveal(){
   const obs=new IntersectionObserver(es=>{
     es.forEach((e,i)=>{if(e.isIntersecting){setTimeout(()=>e.target.classList.add('visible'),i*70);obs.unobserve(e.target);}});
@@ -1387,855 +1602,6 @@ function initReveal(){
   document.querySelectorAll('.reveal:not(.visible)').forEach(el=>obs.observe(el));
 }
 window.initReveal=initReveal;
-
-// Show landing as baseline when DOM ready
-document.addEventListener('DOMContentLoaded',()=>{
-  const active=document.querySelector('.screen.active');
-  if(!active||active.id==='screen-landing'){
-    showScreen('landing');
-  }
-});
-
-// Fallback: if still blank after 4s, show landing
-setTimeout(()=>{
-  const active=document.querySelector('.screen.active');
-  if(!active) showScreen('landing');
-  hideLoader();
-},4000);
-
-// ═══════════════════════════════════════════════════════
-//  JOURNI — Supabase + App Logic
-// ═══════════════════════════════════════════════════════
-
-// Global error handler - never show blank screen
-window.addEventListener('error', (e) => {
-  console.error('App error:', e.message);
-  hideLoader();
-  showScreen('landing');
-});
-window.addEventListener('unhandledrejection', (e) => {
-  console.error('Unhandled promise:', e.reason);
-  hideLoader();
-  showScreen('landing');
-});
-
-// Supabase loaded via CDN script tag in <head>
-
-const SUPABASE_URL  = 'https://dzbxnwmwvwqyhergwefh.supabase.co';
-const SUPABASE_ANON = 'sb_publishable_wd1l9Hb8aWY1NAD3Me1dtw_rOVfO7YI';
-
-let supabase;
-try {
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-} catch(initErr) {
-  console.error('Supabase init failed:', initErr);
-  hideLoader();
-  showScreen('landing');
-}
-
-// ═══════════════════════════════════════════════════════
-//  KAKAO CONFIG
-// ═══════════════════════════════════════════════════════
-const KAKAO_REST_KEY = 'a07eafb015f5cde04600cce29e958db8';
-let kakaoMapInstance = null;
-let kakaoMarkers     = [];
-let kakaoPolyline    = null;
-let kakaoSearchTimer = null;
-let selectedPlace    = null;
-
-// ═══════════════════════════════════════════════════════
-//  APP STATE
-// ═══════════════════════════════════════════════════════
-let CU       = null;
-let CTripId  = null;
-let CTrip    = null;
-let CDayIdx  = 0;
-let CDays    = [];
-let CEvents  = {};
-let EvCtx    = null;
-let RealtimeCh = null;
-
-// ═══════════════════════════════════════════════════════
-//  AUTH
-// ═══════════════════════════════════════════════════════
-window.signInGoogle = async () => {
-  if (!supabase) { showToast('שגיאה: האפליקציה לא נטענה'); return; }
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: { redirectTo: 'https://mosheyomtov.github.io/journi/' }
-  });
-  if (error) showToast('שגיאה בהתחברות');
-};
-
-window.doSignOut = async () => {
-  closeMenus();
-  await supabase.auth.signOut();
-  CU = null;
-  showScreen('landing');
-  showToast('התנתקת');
-};
-
-// Show landing immediately as fallback (don't show blank screen)
-setTimeout(() => {
-  const loader = document.getElementById('loader');
-  if (loader && !loader.classList.contains('hide')) {
-    hideLoader();
-    if (!document.querySelector('.screen.active') ||
-        document.getElementById('screen-landing').classList.contains('active')) {
-      // already on landing, fine
-    }
-    showScreen('landing');
-  }
-}, 3000);
-
-if (supabase) // Check session immediately on page load
-(async () => {
-  try {
-    if (!supabase) { hideLoader(); showScreen('landing'); return; }
-    const { data } = await supabase.auth.getSession();
-    if (data?.session?.user) {
-      hideLoader();
-      CU = data.session.user;
-      const params = new URLSearchParams(window.location.search);
-      const shared = params.get('trip');
-      if (shared) {
-        window.history.replaceState({}, '', window.location.pathname);
-        await openTrip(shared);
-      } else {
-        setupHome();
-        showScreen('home');
-      }
-    } else {
-      hideLoader();
-      showScreen('landing');
-    }
-  } catch(e) {
-    console.error('Session check failed:', e);
-    hideLoader();
-    showScreen('landing');
-  }
-})();
-
-supabase.auth.onAuthStateChange(async (event, session) => {
-  if (event === 'SIGNED_IN' && session?.user) {
-    CU = session.user;
-    setupHome();
-    showScreen('home');
-  } else if (event === 'SIGNED_OUT') {
-    CU = session.user;
-    // Upsert user profile
-    await supabase.from('users').upsert({
-      id:        CU.id,
-      email:     CU.email,
-      name:      CU.user_metadata?.full_name || CU.email,
-      photo_url: CU.user_metadata?.avatar_url || '',
-      last_seen: new Date().toISOString()
-    }, { onConflict: 'id' });
-
-    setupHome();
-
-    const params = new URLSearchParams(window.location.search);
-    const shared = params.get('trip');
-    if (shared) {
-      window.history.replaceState({}, '', window.location.pathname);
-      await openTrip(shared);
-    } else {
-      showScreen('home');
-    }
-  } else if (event === 'SIGNED_OUT') {
-    showScreen('landing');
-  }
-});
-
-// ═══════════════════════════════════════════════════════
-//  HOME
-// ═══════════════════════════════════════════════════════
-function setupHome() {
-  const name = CU.user_metadata?.full_name || CU.email || 'חבר';
-  document.getElementById('greetName').textContent = name.split(' ')[0];
-  buildAvatar();
-  document.getElementById('pmName').textContent  = name;
-  document.getElementById('pmEmail').textContent = CU.email;
-  loadTrips();
-}
-
-function buildAvatar() {
-  const photo    = CU.user_metadata?.avatar_url;
-  const name     = CU.user_metadata?.full_name || CU.email || 'U';
-  const initials = name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
-  const el       = document.getElementById('avatarWrap');
-  el.innerHTML   = photo
-    ? `<div class="avatar-btn" onclick="toggleMenu()"><img src="${photo}"></div>`
-    : `<div class="avatar-btn" onclick="toggleMenu()">${initials}</div>`;
-}
-
-async function loadTrips() {
-  try {
-    // Trips owned
-    const { data: owned } = await supabase.from('trips')
-      .select('id,name,emoji,destination,start_date,end_date,created_at')
-      .eq('owner_id', CU.id)
-      .order('created_at', { ascending: false });
-
-    // Trips via collaboration
-    const { data: myCollabs } = await supabase.from('trip_collaborators')
-      .select('trip_id')
-      .eq('user_id', CU.id);
-
-    const collabIds = (myCollabs||[])
-      .map(r => r.trip_id)
-      .filter(id => !(owned||[]).find(t => t.id === id));
-
-    let collabTrips = [];
-    if (collabIds.length) {
-      const { data } = await supabase.from('trips')
-        .select('id,name,emoji,destination,start_date,end_date,created_at')
-        .in('id', collabIds)
-        .order('created_at', { ascending: false });
-      collabTrips = data || [];
-    }
-
-    const allTrips = [...(owned||[]), ...collabTrips]
-      .sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
-
-    // Event counts
-    const tripIds = allTrips.map(t => t.id);
-    let evCounts  = {};
-    if (tripIds.length) {
-      const { data: evRows } = await supabase.from('events').select('trip_id').in('trip_id', tripIds);
-      (evRows||[]).forEach(e => evCounts[e.trip_id] = (evCounts[e.trip_id]||0)+1);
-    }
-
-    document.getElementById('tripsCount').textContent = allTrips.length ? `${allTrips.length} טיולים` : '';
-
-    if (!allTrips.length) {
-      document.getElementById('tripsList').innerHTML = `
-        <div class="empty-state">
-          <div class="empty-icon">🗺️</div>
-          <div class="empty-title">עדיין אין טיולים</div>
-          <div class="empty-desc">לחץ על "טיול חדש" כדי להתחיל</div>
-        </div>`;
-      return;
-    }
-
-    document.getElementById('tripsList').innerHTML = allTrips.map(t => {
-      const isCollab = collabIds.includes(t.id);
-      const days     = t.start_date && t.end_date
-        ? Math.round((new Date(t.end_date) - new Date(t.start_date)) / 86400000) + 1 : 0;
-      return `<div class="trip-card reveal" onclick="openTrip('${t.id}')">
-        <div class="tc-emoji-wrap">${t.emoji||'✈️'}</div>
-        <div class="tc-body">
-          <div class="tc-name">${t.name}</div>
-          <div class="tc-meta">
-            ${t.destination ? `<span class="tc-chip">📍 ${t.destination}</span>` : ''}
-            ${days ? `<span class="tc-chip">🗓️ ${days} ימים</span>` : ''}
-            <span class="tc-chip">📌 ${evCounts[t.id]||0}</span>
-            ${isCollab ? '<span class="tc-chip tc-shared">👥 משותף</span>' : ''}
-          </div>
-        </div>
-        <div class="tc-arrow">›</div>
-      </div>`;
-    }).join('');
-    setTimeout(initReveal, 100);
-  } catch(e) {
-    showToast('שגיאה בטעינת טיולים');
-    console.error(e);
-  }
-}
-
-// ═══════════════════════════════════════════════════════
-//  NEW TRIP
-// ═══════════════════════════════════════════════════════
-const EMOJIS = ['✈️','🗺️','🏖️','🏔️','🗼','🎌','🌸','🌊','🏝️','🌍','🇯🇵','🇰🇷','🇹🇭','🇮🇹','🇫🇷','🇺🇸','🌆','🎭','🎪','🎡','🎢','🍜','🍣','🥘','🏄','🎿','🚂','🚢'];
-
-window.showNewTrip = () => {
-  document.getElementById('emojiGrid').innerHTML = EMOJIS.map((e,i) =>
-    `<div class="ep-item ${i===0?'sel':''}" onclick="pickEmoji('${e}',this)">${e}</div>`
-  ).join('');
-  showScreen('new-trip');
-};
-window.pickEmoji = (e, el) => {
-  document.querySelectorAll('.ep-item').forEach(x => x.classList.remove('sel'));
-  el.classList.add('sel');
-};
-
-window.createTrip = async () => {
-  const emoji = document.querySelector('.ep-item.sel')?.textContent || '✈️';
-  const name  = document.getElementById('newTripName').value.trim();
-  const dest  = document.getElementById('newTripDest').value.trim();
-  const start = document.getElementById('newTripStart').value;
-  const end   = document.getElementById('newTripEnd').value;
-  if (!name) { showToast('אנא הכנס שם לטיול'); return; }
-
-  try {
-    const { data: trips, error } = await supabase.from('trips').insert({
-      owner_id:    CU.id,
-      name, emoji,
-      destination: dest || null,
-      start_date:  start || null,
-      end_date:    end   || null,
-    }).select();
-    if (error) throw error;
-    const trip = trips[0];
-
-    await supabase.from('trip_collaborators').insert({
-      trip_id: trip.id, user_id: CU.id, role: 'owner'
-    });
-
-    if (start && end) await createDayRows(trip.id, start, end);
-
-    ['newTripName','newTripDest','newTripStart','newTripEnd'].forEach(x => document.getElementById(x).value = '');
-    showToast('✓ הטיול נוצר!');
-    await openTrip(trip.id);
-  } catch(e) {
-    showToast('שגיאה ביצירת טיול');
-    console.error(e);
-  }
-};
-
-async function createDayRows(tripId, startDate, endDate) {
-  const start = new Date(startDate), end = new Date(endDate), rows = [];
-  let i = 0;
-  for (let d = new Date(start); d <= end; d.setDate(d.getDate()+1)) {
-    rows.push({
-      trip_id:   tripId,
-      day_index: i++,
-      label:     `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}`
-    });
-  }
-  if (rows.length) await supabase.from('trip_days').insert(rows);
-}
-
-// ═══════════════════════════════════════════════════════
-//  OPEN TRIP
-// ═══════════════════════════════════════════════════════
-async function openTrip(tripId) {
-  CTripId = tripId; CDayIdx = 0;
-  try {
-    const { data: trips } = await supabase.from('trips').select('*').eq('id', tripId).limit(1);
-    CTrip = trips?.[0];
-    if (!CTrip) { showToast('טיול לא נמצא'); return; }
-
-    // Join as collaborator if not already
-    await supabase.from('trip_collaborators').upsert(
-      { trip_id: tripId, user_id: CU.id, role: 'viewer' },
-      { onConflict: 'trip_id,user_id', ignoreDuplicates: true }
-    );
-
-    // Load days
-    const { data: days } = await supabase.from('trip_days')
-      .select('*').eq('trip_id', tripId).order('day_index');
-    CDays = days || [];
-
-    if (!CDays.length && CTrip.start_date && CTrip.end_date) {
-      await createDayRows(tripId, CTrip.start_date, CTrip.end_date);
-      const { data: d2 } = await supabase.from('trip_days')
-        .select('*').eq('trip_id', tripId).order('day_index');
-      CDays = d2 || [];
-    }
-    if (!CDays.length) {
-      const { data: d3 } = await supabase.from('trip_days')
-        .insert({ trip_id: tripId, day_index: 0, label: 'יום 1' }).select();
-      CDays = d3 || [];
-    }
-
-    // Load all events
-    const dayIds = CDays.map(d => d.id);
-    CEvents = {};
-    CDays.forEach(d => { CEvents[d.id] = []; });
-    if (dayIds.length) {
-      const { data: evs } = await supabase.from('events')
-        .select('*').in('day_id', dayIds).order('time');
-      (evs||[]).forEach(e => { if (CEvents[e.day_id]) CEvents[e.day_id].push(e); });
-    }
-
-    // Load collabs
-    const { data: collabs } = await supabase.from('trip_collaborators')
-      .select('user_id,role,joined_at,users(name,email,photo_url)')
-      .eq('trip_id', tripId);
-
-    // Realtime subscription
-    if (RealtimeCh) supabase.removeChannel(RealtimeCh);
-    RealtimeCh = supabase
-      .channel(`trip_${tripId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'events', filter: `trip_id=eq.${tripId}` },
-        async () => {
-          if (!dayIds.length) return;
-          const { data: evs } = await supabase.from('events')
-            .select('*').in('day_id', dayIds).order('time');
-          CEvents = {};
-          CDays.forEach(d => { CEvents[d.id] = []; });
-          (evs||[]).forEach(e => { if (CEvents[e.day_id]) CEvents[e.day_id].push(e); });
-          renderSchedule();
-        }
-      )
-      .subscribe();
-
-    document.getElementById('shareUrl').textContent =
-      `${location.origin}${location.pathname}?trip=${tripId}`;
-
-    renderTripDetail(collabs||[]);
-    showScreen('trip');
-  } catch(e) {
-    showToast('שגיאה בטעינת הטיול');
-    console.error(e);
-  }
-}
-window.openTrip = openTrip;
-
-function renderTripDetail(collabs=[]) {
-  document.getElementById('tdEmoji').textContent  = CTrip.emoji || '✈️';
-  document.getElementById('tdName').textContent   = CTrip.name  || '—';
-  document.getElementById('tdDest').textContent   = CTrip.destination || 'יעד לא הוגדר';
-  const s = CTrip.start_date ? fmtDate(CTrip.start_date) : '';
-  const e = CTrip.end_date   ? fmtDate(CTrip.end_date)   : '';
-  document.getElementById('tdDates').textContent  = s && e ? `${s} – ${e}` : s || 'תאריכים לא הוגדרו';
-  renderDayPills();
-  renderSchedule();
-  renderNotes();
-  renderCollabs(collabs);
-}
-function fmtDate(d) { const [y,m,day]=d.split('-'); return `${day}.${m}.${y}`; }
-
-// ── DAYS ──
-const WD = ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
-
-function renderDayPills() {
-  document.getElementById('dayPills').innerHTML = CDays.map((d,i) => {
-    let dayLbl = `${i+1}`;
-    if (CTrip.start_date) {
-      const dt = new Date(new Date(CTrip.start_date).getTime() + i*86400000);
-      dayLbl = WD[dt.getDay()];
-    }
-    return `<div class="day-pill ${i===CDayIdx?'active':''}" onclick="selDay(${i})">
-      <span class="dp-num">${d.label||`יום ${i+1}`}</span>
-      <span class="dp-day">${dayLbl}</span>
-      <span class="dp-lbl">יום ${i+1}</span>
-    </div>`;
-  }).join('');
-}
-window.selDay = i => { CDayIdx = i; renderDayPills(); renderSchedule(); };
-
-// ── SCHEDULE ──
-const TAGS = {
-  sight:{ p:'pill-sight', l:'📍 אטרקציה' },
-  food: { p:'pill-food',  l:'🍽️ אוכל' },
-  sleep:{ p:'pill-sleep', l:'🏨 מלון' },
-  shop: { p:'pill-shop',  l:'🛍️ קניות' },
-  night:{ p:'pill-night', l:'🌙 לילה' },
-  move: { p:'pill-move',  l:'🚇 נסיעה' },
-};
-
-function haversineKm(la1,lo1,la2,lo2){
-  const R=6371,dL=(la2-la1)*Math.PI/180,dG=(lo2-lo1)*Math.PI/180;
-  const a=Math.sin(dL/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dG/2)**2;
-  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-}
-function fmtDist(km){ return km<1 ? Math.round(km*1000)+'מ'' : km.toFixed(1)+'ק"מ'; }
-
-function renderSchedule() {
-  const day = CDays[CDayIdx];
-  if (!day) return;
-  const evs = (CEvents[day.id]||[]).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
-
-  document.getElementById('addEvBtn').onclick = () => openAddEvent();
-  if (window.kakao?.maps) { if (!kakaoMapInstance) initKakaoMap(); updateMapMarkers(evs); }
-
-  const body = document.getElementById('tlBody');
-  if (!evs.length) {
-    body.innerHTML = `<div class="empty-state" style="border:1.5px dashed var(--border-2)">
-      <div class="empty-icon">📅</div>
-      <div class="empty-title">אין אירועים ביום הזה</div>
-      <div class="empty-desc">לחץ + כדי להוסיף</div></div>`;
-    return;
-  }
-
-  body.innerHTML = evs.map((ev,i) => {
-    let distHtml = '';
-    if (i>0) {
-      const p=evs[i-1];
-      if (p.lat&&p.lng&&ev.lat&&ev.lng) {
-        const km = haversineKm(p.lat,p.lng,ev.lat,ev.lng);
-        distHtml = `<div class="dist-badge"><div class="dist-line"></div>
-          <div class="dist-pill">📏 ${fmtDist(km)} מהאירוע הקודם</div>
-          <div class="dist-line"></div></div>`;
-      }
-    }
-    const mapBtn = ev.lat&&ev.lng
-      ? `<button class="kakao-map-btn" onclick="event.stopPropagation();openKakaoNav('${esc(ev.name)}',${ev.lat},${ev.lng})">🗺️ נווט ב-Kakao</button>`
-      : (ev.address ? `<button class="naver-btn" onclick="event.stopPropagation();naverMap('${esc(ev.address)}')">📍 Naver Map</button>` : '');
-
-    return `${distHtml}
-    <div class="tl-item" style="animation-delay:${i*.04}s">
-      <div class="tl-dot" style="${ev.lat&&ev.lng?'border-color:var(--green);box-shadow:0 0 0 3px rgba(34,197,94,0.15)':''}"></div>
-      <div class="tl-card" onclick="toggleEv(this)">
-        <div class="tl-top">
-          <span class="tl-time">${ev.time||'--:--'}</span>
-          <span class="tl-emoji">${ev.emoji||'📍'}</span>
-          <span class="tl-name">${ev.name||'—'}</span>
-          <span class="tl-chevron">›</span>
-        </div>
-        <div class="tl-tags">
-          <span class="pill ${TAGS[ev.tag]?.p||'pill-sight'}">${TAGS[ev.tag]?.l||'📍 אטרקציה'}</span>
-          ${ev.lat&&ev.lng?'<span class="pill pill-sight" style="background:var(--green-light);color:var(--green)">📍 ממופה</span>':''}
-        </div>
-        <div class="tl-body">
-          ${ev.description?`<div class="tl-desc">${ev.description}</div>`:''}
-          ${ev.how?`<div class="info-block ib-nav"><div class="info-lbl">🚇 איך מגיעים</div><div class="info-text">${ev.how}</div></div>`:''}
-          ${ev.warning?`<div class="info-block ib-warn"><div class="info-lbl">⚠️ אזהרה</div><div class="info-text">${ev.warning}</div></div>`:''}
-          ${ev.tip?`<div class="info-block ib-tip"><div class="info-lbl">💡 טיפ</div><div class="info-text">${ev.tip}</div></div>`:''}
-          ${mapBtn}
-          <div class="event-acts">
-            <button class="ev-act edit" onclick="event.stopPropagation();openEditEvent('${ev.id}')">✏️ ערוך</button>
-            <button class="ev-act del"  onclick="event.stopPropagation();deleteEventById('${ev.id}')">🗑️ מחק</button>
-          </div>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-}
-window.toggleEv = el => { el.classList.toggle('open'); el.querySelector('.tl-body').classList.toggle('show'); };
-
-// ── KAKAO MAP ──
-function initKakaoMap() {
-  if (!window.kakao?.maps) return;
-  const c = document.getElementById('kakaoMap');
-  kakaoMapInstance = new kakao.maps.Map(c, { center: new kakao.maps.LatLng(37.5665,126.9780), level:7 });
-  document.getElementById('mapLoading').style.display='none';
-  c.style.display='block';
-}
-
-function updateMapMarkers(evs) {
-  if (!kakaoMapInstance) return;
-  kakaoMarkers.forEach(m=>m.setMap(null)); kakaoMarkers=[];
-  if (kakaoPolyline) { kakaoPolyline.setMap(null); kakaoPolyline=null; }
-  const COLS=['#3B6EF5','#22C55E','#F59E0B','#F43F5E','#8B5CF6','#06B6D4','#EC4899','#84CC16'];
-  const pts=[], leg=document.getElementById('mapLegend');
-  evs.forEach((ev,i)=>{
-    if (!ev.lat||!ev.lng) return;
-    const pos=new kakao.maps.LatLng(ev.lat,ev.lng); pts.push(pos);
-    const col=COLS[i%COLS.length], lbl=ev.search_query||ev.name||'';
-    const content=`<div style="text-align:center">
-      <div style="background:${col};color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;box-shadow:0 2px 8px rgba(0,0,0,.25);border:2px solid #fff">${i+1}</div>
-      <div style="background:#fff;border-radius:6px;padding:2px 6px;font-size:10px;font-weight:600;color:#333;box-shadow:0 1px 4px rgba(0,0,0,.15);white-space:nowrap;max-width:90px;overflow:hidden;text-overflow:ellipsis;margin-top:2px">${lbl}</div></div>`;
-    const ov=new kakao.maps.CustomOverlay({position:pos,content,yAnchor:1.2});
-    ov.setMap(kakaoMapInstance); kakaoMarkers.push(ov);
-  });
-  if (pts.length>1){
-    kakaoPolyline=new kakao.maps.Polyline({path:pts,strokeWeight:3,strokeColor:'#3B6EF5',strokeOpacity:.7,strokeStyle:'shortdot'});
-    kakaoPolyline.setMap(kakaoMapInstance);
-  }
-  if (pts.length===1){kakaoMapInstance.setCenter(pts[0]);kakaoMapInstance.setLevel(4);}
-  else if (pts.length>1){const b=new kakao.maps.LatLngBounds();pts.forEach(p=>b.extend(p));kakaoMapInstance.setBounds(b);}
-  const mapped=evs.filter(ev=>ev.lat&&ev.lng);
-  if (mapped.length){
-    leg.style.display='flex';
-    leg.innerHTML='<span style="font-weight:700;color:var(--ink-2);margin-left:6px">מסלול:</span>'+
-      mapped.map((ev,i)=>`<div class="legend-item"><div class="legend-dot" style="background:${COLS[i%COLS.length]}"></div><span>${ev.search_query||ev.name||'?'}</span></div>`).join('<span style="color:var(--ink-4)">→</span>');
-  } else { leg.style.display='none'; }
-  document.getElementById('mapWrap').style.display='';
-}
-
-// ── KAKAO CATEGORY ──
-const KAK_CAT={MT1:{en:'Supermarket',icon:'🛒'},CS2:{en:'Convenience',icon:'🏪'},PS3:{en:'Preschool',icon:'🎓'},SC4:{en:'School',icon:'🏫'},AC5:{en:'Academy',icon:'📚'},PK6:{en:'Parking',icon:'🅿️'},OL7:{en:'Gas Station',icon:'⛽'},SW8:{en:'Subway',icon:'🚇'},BK9:{en:'Bank',icon:'🏦'},CT1:{en:'Cultural Facility',icon:'🎭'},AG2:{en:'Real Estate',icon:'🏢'},PO3:{en:'Public Office',icon:'🏛️'},AT4:{en:'Sightseeing',icon:'🗺️'},AD5:{en:'Accommodation',icon:'🏨'},FD6:{en:'Restaurant',icon:'🍽️'},CE7:{en:'Cafe',icon:'☕'},HP8:{en:'Hospital',icon:'🏥'},PM9:{en:'Pharmacy',icon:'💊'}};
-const KR_FB=[[['카페','커피'],{en:'Cafe',icon:'☕'}],[['식당','음식점','맛집','한식','중식','일식','양식'],{en:'Restaurant',icon:'🍽️'}],[['호텔','모텔','숙소','리조트','펜션'],{en:'Hotel',icon:'🏨'}],[['관광','명소','공원','박물관','미술관','궁'],{en:'Attraction',icon:'🗺️'}],[['쇼핑','백화점','마트','시장'],{en:'Shopping',icon:'🛍️'}],[['병원','의원'],{en:'Hospital',icon:'🏥'}],[['은행'],{en:'Bank',icon:'🏦'}],[['편의점'],{en:'Convenience',icon:'🏪'}]];
-function translateCategory(code,full){
-  if(code&&KAK_CAT[code]){const c=KAK_CAT[code];return`<span style="font-size:10px;background:var(--brand-light);color:var(--brand);padding:1px 6px;border-radius:20px;font-weight:700">${c.icon} ${c.en}</span>`;}
-  if(full){for(const[kw,v]of KR_FB){if(kw.some(k=>full.includes(k)))return`<span style="font-size:10px;background:var(--brand-light);color:var(--brand);padding:1px 6px;border-radius:20px;font-weight:700">${v.icon} ${v.en}</span>`;}}
-  return'';
-}
-
-// ── KAKAO AUTOCOMPLETE ──
-window.kakaoSearch = function(query) {
-  clearTimeout(kakaoSearchTimer);
-  const dd=document.getElementById('kacDropdown');
-  if(!query||query.length<2){dd.style.display='none';return;}
-  kakaoSearchTimer=setTimeout(async()=>{
-    try{
-      const r=await fetch(`https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}&size=7`,
-        {headers:{'Authorization':'KakaoAK '+KAKAO_REST_KEY}});
-      const data=await r.json();
-      const docs=data.documents||[];
-      if(!docs.length){dd.innerHTML='<div class="kac-empty">לא נמצאו תוצאות</div>';dd.style.display='block';return;}
-      dd.innerHTML=docs.map((d,i)=>`
-        <div class="kac-item" onclick="pickPlace(${i},'${btoa(unescape(encodeURIComponent(JSON.stringify({name:d.place_name,addr:d.road_address_name||d.address_name,lat:parseFloat(d.y),lng:parseFloat(d.x),cat:d.category_group_code||''}))))}')">
-          <div class="kac-name" style="display:flex;align-items:center;gap:6px;justify-content:flex-end;flex-wrap:wrap">
-            ${translateCategory(d.category_group_code,d.category_name||'')}
-            <span>${d.place_name}</span>
-          </div>
-          <div class="kac-addr">${d.road_address_name||d.address_name||''}</div>
-        </div>`).join('');
-      dd.style.display='block';
-    }catch(e){dd.style.display='none';}
-  },350);
-};
-
-window.pickPlace = function(i,b64){
-  try{
-    const p=JSON.parse(decodeURIComponent(escape(atob(b64))));
-    p.searchQuery=document.getElementById('evAddr').value||p.name;
-    selectedPlace=p;
-    document.getElementById('evAddr').value=p.name;
-    document.getElementById('kacDropdown').style.display='none';
-    const info=document.getElementById('evPlaceInfo');
-    document.getElementById('evPlaceInfoTxt').innerHTML=`<strong>${p.name}</strong><br><span style="font-size:11px">${p.addr||''}</span>`;
-    info.style.display='block';
-  }catch(e){}
-};
-
-document.addEventListener('click',e=>{
-  if(!e.target.closest('.addr-field-wrap'))
-    document.getElementById('kacDropdown').style.display='none';
-});
-
-window.openKakaoNav=function(name,lat,lng){
-  const mob=/Android|iPhone|iPad/i.test(navigator.userAgent);
-  if(mob){location.href=`kakaomap://route?ep=${lat},${lng}&by=CAR`;setTimeout(()=>window.open(`https://map.kakao.com/?q=${encodeURIComponent(name)}`,'_blank'),1500);}
-  else window.open(`https://map.kakao.com/?q=${encodeURIComponent(name)}`,'_blank');
-};
-
-// ═══════════════════════════════════════════════════════
-//  EVENTS CRUD
-// ═══════════════════════════════════════════════════════
-window.openAddEvent = () => {
-  const day=CDays[CDayIdx]; if(!day) return;
-  EvCtx={dayId:day.id,evId:null}; selectedPlace=null;
-  document.getElementById('evSheetTitle').textContent='הוסף אירוע';
-  document.getElementById('evDelBtn').style.display='none';
-  ['evTime','evEmoji','evName','evDesc','evAddr','evHow','evWarn','evTip'].forEach(x=>document.getElementById(x).value='');
-  document.getElementById('evTag').value='sight';
-  document.getElementById('kacDropdown').style.display='none';
-  document.getElementById('evPlaceInfo').style.display='none';
-  document.getElementById('olEvent').classList.add('show');
-};
-
-window.openEditEvent = evId => {
-  const day=CDays[CDayIdx];
-  const ev=(CEvents[day?.id]||[]).find(e=>e.id===evId);
-  if(!ev) return;
-  EvCtx={dayId:day.id,evId}; selectedPlace=null;
-  document.getElementById('evSheetTitle').textContent='ערוך אירוע';
-  document.getElementById('evDelBtn').style.display='';
-  document.getElementById('evTime').value=ev.time||'';
-  document.getElementById('evEmoji').value=ev.emoji||'';
-  document.getElementById('evName').value=ev.name||'';
-  document.getElementById('evDesc').value=ev.description||'';
-  document.getElementById('evAddr').value=ev.place_name||ev.address||'';
-  document.getElementById('evHow').value=ev.how||'';
-  document.getElementById('evWarn').value=ev.warning||'';
-  document.getElementById('evTip').value=ev.tip||'';
-  document.getElementById('evTag').value=ev.tag||'sight';
-  document.getElementById('kacDropdown').style.display='none';
-  const info=document.getElementById('evPlaceInfo');
-  if(ev.lat&&ev.lng){
-    selectedPlace={name:ev.place_name||ev.address||'',addr:ev.place_addr||'',lat:ev.lat,lng:ev.lng,searchQuery:ev.search_query||ev.name||''};
-    document.getElementById('evPlaceInfoTxt').innerHTML=`<strong>${ev.place_name||ev.address||''}</strong><br><span style="font-size:11px">${ev.place_addr||''}</span>`;
-    info.style.display='block';
-  } else { info.style.display='none'; }
-  document.getElementById('olEvent').classList.add('show');
-};
-
-window.saveEvent = async () => {
-  if(!EvCtx) return;
-  const ev={
-    day_id:EvCtx.dayId, trip_id:CTripId,
-    time:document.getElementById('evTime').value||'00:00',
-    emoji:document.getElementById('evEmoji').value||'📍',
-    name:document.getElementById('evName').value||'אירוע',
-    description:document.getElementById('evDesc').value,
-    address:document.getElementById('evAddr').value,
-    how:document.getElementById('evHow').value,
-    warning:document.getElementById('evWarn').value,
-    tip:document.getElementById('evTip').value,
-    tag:document.getElementById('evTag').value,
-  };
-  if(selectedPlace){
-    ev.lat=selectedPlace.lat; ev.lng=selectedPlace.lng;
-    ev.place_name=selectedPlace.name; ev.place_addr=selectedPlace.addr||'';
-    ev.search_query=selectedPlace.searchQuery||selectedPlace.name;
-  }
-  try{
-    if(EvCtx.evId){
-      await supabase.from('events').update(ev).eq('id',EvCtx.evId);
-    }else{
-      await supabase.from('events').insert(ev);
-    }
-    const{data:updated}=await supabase.from('events').select('*').eq('day_id',EvCtx.dayId).order('time');
-    CEvents[EvCtx.dayId]=updated||[];
-    selectedPlace=null;
-    document.getElementById('evPlaceInfo').style.display='none';
-    closeOlDirect('olEvent');
-    renderSchedule();
-    showToast('✓ נשמר');
-  }catch(e){showToast('שגיאה בשמירה');console.error(e);}
-};
-
-window.deleteEvent=()=>{if(EvCtx?.evId)deleteEventById(EvCtx.evId);closeOlDirect('olEvent');};
-
-window.deleteEventById=async evId=>{
-  if(!confirm('למחוק את האירוע?')) return;
-  try{
-    await supabase.from('events').delete().eq('id',evId);
-    const day=CDays[CDayIdx];
-    CEvents[day.id]=(CEvents[day.id]||[]).filter(e=>e.id!==evId);
-    renderSchedule(); showToast('✓ נמחק');
-  }catch(e){showToast('שגיאה במחיקה');}
-};
-
-// ── NOTES / SHARE / COLLABS ──
-function renderNotes(){ document.getElementById('notesTA').value=CTrip?.notes||''; }
-window.saveNotes=async()=>{
-  await supabase.from('trips').update({notes:document.getElementById('notesTA').value}).eq('id',CTripId);
-  showToast('✓ הערות נשמרו');
-};
-window.copyLink=()=>navigator.clipboard.writeText(document.getElementById('shareUrl').textContent).then(()=>showToast('✓ קישור הועתק!'));
-window.doShareBtn=()=>showTabFn('share',document.querySelectorAll('.tn-btn')[2]);
-
-function renderCollabs(collabs=[]){
-  document.getElementById('collabList').innerHTML=collabs.length
-    ?collabs.map(c=>{const u=c.users||{};return`<div class="collab-row">
-      <div class="collab-av">${(u.name||'?')[0]}</div>
-      <div><div class="collab-name">${u.name||'משתמש'}</div><div class="collab-role">${c.role==='owner'?'בעלים':'משתתף'}</div></div>
-      <span class="role-badge ${c.role==='owner'?'rb-owner':'rb-viewer'}">${c.role==='owner'?'👑 בעלים':'👤 משתתף'}</span>
-    </div>`;}).join('')
-    :'<div style="font-size:13px;color:var(--ink-3)">אין משתתפים נוספים</div>';
-}
-
-// ── EDIT / DELETE TRIP ──
-window.editTrip=()=>{
-  document.getElementById('etName').value=CTrip.name||'';
-  document.getElementById('etDest').value=CTrip.destination||'';
-  document.getElementById('etStart').value=CTrip.start_date||'';
-  document.getElementById('etEnd').value=CTrip.end_date||'';
-  document.getElementById('olEditTrip').classList.add('show');
-};
-window.saveEditTrip=async()=>{
-  const upd={name:document.getElementById('etName').value,destination:document.getElementById('etDest').value,start_date:document.getElementById('etStart').value||null,end_date:document.getElementById('etEnd').value||null};
-  await supabase.from('trips').update(upd).eq('id',CTripId);
-  Object.assign(CTrip,upd);
-  renderTripDetail(); closeOlDirect('olEditTrip'); showToast('✓ עודכן');
-};
-window.deleteTrip=async()=>{
-  if(!confirm(`למחוק "${CTrip?.name}"?`)) return;
-  await supabase.from('trips').delete().eq('id',CTripId);
-  showScreen('home'); showToast('✓ הטיול נמחק');
-};
-
-// ── ADMIN ──
-window.goAdmin=async()=>{
-  closeMenus();
-  try{
-    const[{data:trips},{data:users},{data:evRows},{data:collRows}]=await Promise.all([
-      supabase.from('trips').select('id,name,emoji,destination,created_at').order('created_at',{ascending:false}),
-      supabase.from('users').select('id'),
-      supabase.from('events').select('id'),
-      supabase.from('trip_collaborators').select('trip_id,user_id'),
-    ]);
-    document.getElementById('sTotal').textContent=(trips||[]).length;
-    document.getElementById('sUsers').textContent=(users||[]).length;
-    const today=new Date().setHours(0,0,0,0);
-    document.getElementById('sToday').textContent=(trips||[]).filter(t=>new Date(t.created_at)>=today).length;
-    document.getElementById('sEvents').textContent=(evRows||[]).length;
-    const clMap={};(collRows||[]).forEach(r=>{clMap[r.trip_id]=(clMap[r.trip_id]||0)+1;});
-    document.getElementById('adminList').innerHTML=(trips||[]).map(t=>`
-      <div class="admin-card" onclick="openTrip('${t.id}');showScreen('trip')">
-        <div class="ac-top">
-          <span class="ac-emoji">${t.emoji||'✈️'}</span>
-          <span class="ac-name">${t.name||'ללא שם'}</span>
-          <span class="ac-date">${new Date(t.created_at).toLocaleDateString('he-IL')}</span>
-        </div>
-        <div class="ac-chips">
-          <span class="ac-chip chip-users">👥 ${clMap[t.id]||1}</span>
-          ${(clMap[t.id]||1)>1?'<span class="ac-chip chip-shared">✓ משותף</span>':''}
-        </div>
-      </div>`).join('')||'<div style="text-align:center;padding:32px;color:var(--ink-3)">אין טיולים</div>';
-    showScreen('admin');
-  }catch(e){showToast('שגיאה בטעינת Admin');console.error(e);}
-};
-
-// ── NAV / UTILS ──
-window.naverMap=q=>{const enc=encodeURIComponent(q);if(/Android|iPhone|iPad/i.test(navigator.userAgent)){location.href=`nmap://search?query=${enc}&appname=journi`;setTimeout(()=>window.open(`https://www.google.com/maps/search/${enc}`,'_blank'),1500);}else window.open(`https://map.naver.com/v5/search/${enc}`,'_blank');};
-function esc(s){return String(s).replace(/'/g,"\'").replace(/"/g,'&quot;');}
-
-
-// ── EMAIL AUTH ──
-var authMode = 'login';
-
-window.switchTab = function(mode) {
-  authMode = mode;
-  var isLogin = mode === 'login';
-  document.getElementById('tabLogin').style.background = isLogin ? 'var(--ink)' : '#fff';
-  document.getElementById('tabLogin').style.color = isLogin ? '#fff' : 'var(--ink-3)';
-  document.getElementById('tabRegister').style.background = !isLogin ? 'var(--ink)' : '#fff';
-  document.getElementById('tabRegister').style.color = !isLogin ? '#fff' : 'var(--ink-3)';
-  document.getElementById('authBtn').textContent = isLogin ? 'כניסה' : 'הרשמה';
-  document.getElementById('authError').style.display = 'none';
-};
-
-window.doAuth = async function() {
-  var email = document.getElementById('authEmail').value.trim();
-  var password = document.getElementById('authPassword').value;
-  var errEl = document.getElementById('authError');
-  var btn = document.getElementById('authBtn');
-
-  errEl.style.background = '#FFF1F3';
-  errEl.style.borderColor = 'rgba(244,63,94,0.2)';
-  errEl.style.color = '#F43F5E';
-
-  if (!email || !password) {
-    errEl.textContent = 'אנא הכנס אימייל וסיסמה';
-    errEl.style.display = 'block'; return;
-  }
-  if (password.length < 6) {
-    errEl.textContent = 'הסיסמה חייבת להיות לפחות 6 תווים';
-    errEl.style.display = 'block'; return;
-  }
-
-  btn.textContent = '...';
-  btn.disabled = true;
-  errEl.style.display = 'none';
-
-  try {
-    var result;
-    if (authMode === 'login') {
-      result = await supabase.auth.signInWithPassword({ email: email, password: password });
-    } else {
-      result = await supabase.auth.signUp({ email: email, password: password });
-    }
-
-    if (result.error) {
-      var msg = result.error.message;
-      if (msg.includes('Invalid login')) msg = 'אימייל או סיסמה שגויים';
-      if (msg.includes('already registered')) msg = 'האימייל כבר רשום — נסה להתחבר';
-      if (msg.includes('Email not confirmed')) msg = 'יש לאמת את האימייל תחילה';
-      errEl.textContent = msg;
-      errEl.style.display = 'block';
-    } else if (authMode === 'register' && result.data && result.data.user && !result.data.session) {
-      errEl.style.background = '#EDFBF3';
-      errEl.style.borderColor = 'rgba(34,197,94,0.2)';
-      errEl.style.color = '#22C55E';
-      errEl.textContent = 'נשלח אימייל אימות — בדוק את תיבת הדואר';
-      errEl.style.display = 'block';
-    } else if (result.data && result.data.session) {
-      CU = result.data.session.user;
-      setupHome();
-      showScreen('home');
-    }
-  } catch(e) {
-    errEl.textContent = 'שגיאה — נסה שוב';
-    errEl.style.display = 'block';
-  }
-
-  btn.textContent = authMode === 'login' ? 'כניסה' : 'הרשמה';
-  btn.disabled = false;
-};
-
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') {
-    var landing = document.getElementById('screen-landing');
-    if (landing && landing.style.display !== 'none') doAuth();
-  }
-});
 </script>
 </body>
 </html>
