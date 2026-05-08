@@ -1473,20 +1473,40 @@ setTimeout(() => {
   }
 }, 3000);
 
-if (supabase) // Handle OAuth redirect - parse hash on page load
+if (supabase) // Check session immediately on page load
 (async () => {
   try {
-    const hash = window.location.hash;
-    if (hash && hash.includes('access_token')) {
-      // Supabase will handle this automatically via onAuthStateChange
-      window.history.replaceState({}, document.title, window.location.pathname);
+    if (!supabase) { hideLoader(); showScreen('landing'); return; }
+    const { data } = await supabase.auth.getSession();
+    if (data?.session?.user) {
+      hideLoader();
+      CU = data.session.user;
+      const params = new URLSearchParams(window.location.search);
+      const shared = params.get('trip');
+      if (shared) {
+        window.history.replaceState({}, '', window.location.pathname);
+        await openTrip(shared);
+      } else {
+        setupHome();
+        showScreen('home');
+      }
+    } else {
+      hideLoader();
+      showScreen('landing');
     }
-  } catch(e) {}
+  } catch(e) {
+    console.error('Session check failed:', e);
+    hideLoader();
+    showScreen('landing');
+  }
 })();
 
 supabase.auth.onAuthStateChange(async (event, session) => {
-  hideLoader();
-  if (session?.user) {
+  if (event === 'SIGNED_IN' && session?.user) {
+    CU = session.user;
+    setupHome();
+    showScreen('home');
+  } else if (event === 'SIGNED_OUT') {
     CU = session.user;
     // Upsert user profile
     await supabase.from('users').upsert({
