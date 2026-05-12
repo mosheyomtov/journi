@@ -1207,7 +1207,7 @@ body {
 <!-- FIREBASE -->
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import{getAuth,signInWithPopup,GoogleAuthProvider,signOut as fbSO,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import{getAuth,signInWithRedirect,getRedirectResult,GoogleAuthProvider,signOut as fbSO,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import{getDatabase,ref,set,get,push,onValue,off,remove,update}from"https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const cfg={
@@ -1228,10 +1228,20 @@ provider.setCustomParameters({prompt:'select_account',hl:'iw'});
 
 let CU=null,CTripId=null,CTrip=null,CDayIdx=0,EvCtx=null;
 
+// ── REDIRECT RESULT ──
+getRedirectResult(auth).catch(e=>{
+  if(e.code!=='auth/cancelled-popup-request')
+    showToast('שגיאה בהתחברות: '+e.message);
+});
+
 // ── AUTH ──
 window.signInGoogle=async()=>{
-  try{await signInWithPopup(auth,provider);}
-  catch(e){if(e.code!=='auth/popup-closed-by-user')showToast('שגיאה בהתחברות');}
+  try{
+    await signInWithRedirect(auth,provider);
+  }catch(e){
+    console.error('signInWithRedirect error',e);
+    showToast('שגיאה בהתחברות: '+e.message);
+  }
 };
 window.doSignOut=async()=>{closeMenus();await fbSO(auth);showScreen('landing');showToast('התנתקת');};
 
