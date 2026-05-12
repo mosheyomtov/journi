@@ -1240,46 +1240,31 @@ body {
   </div>
 </div>
 
-<!-- FIREBASE -->
+<!-- SUPABASE -->
 <script type="module">
-import{initializeApp}from"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import{getAuth,signInWithRedirect,getRedirectResult,GoogleAuthProvider,createUserWithEmailAndPassword,signInWithEmailAndPassword,updateProfile,signOut as fbSO,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import{getDatabase,ref,set,get,push,onValue,off,remove,update}from"https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import{createClient}from'https://esm.sh/@supabase/supabase-js@2';
 
-const cfg={
-  apiKey:"AIzaSyDEvGcq2Q4Strv1NyexnhToz6rUKwOHe9Y",
-  authDomain:"trip-planner-il.firebaseapp.com",
-  databaseURL:"https://trip-planner-il-default-rtdb.firebaseio.com",
-  projectId:"trip-planner-il",
-  storageBucket:"trip-planner-il.firebasestorage.app",
-  messagingSenderId:"573417227949",
-  appId:"1:573417227949:web:f69e2e7e848e41ef946824"
-};
+const sb=createClient(
+  'https://dzbxnwmwvwqyhergwefh.supabase.co',
+  'sb_publishable_wd1l9Hb8aWY1NAD3Me1dtw_rOVfO7YI'
+);
 
-const fbApp=initializeApp(cfg);
-const auth=getAuth(fbApp);
-const db=getDatabase(fbApp);
-const provider=new GoogleAuthProvider();
-provider.setCustomParameters({prompt:'select_account',hl:'iw'});
-
-let CU=null,CTripId=null,CTrip=null,CDayIdx=0,EvCtx=null;
-
-// ── REDIRECT RESULT ──
-getRedirectResult(auth).catch(e=>{
-  if(e.code!=='auth/cancelled-popup-request')
-    showToast('שגיאה בהתחברות: '+e.message);
-});
+let CU=null,CTripId=null,CTrip=null,CDayIdx=0,EvCtx=null,rtChannel=null;
 
 // ── AUTH ──
 window.signInGoogle=async()=>{
-  try{
-    await signInWithRedirect(auth,provider);
-  }catch(e){
-    console.error('signInWithRedirect error',e);
-    showToast('שגיאה בהתחברות: '+e.message);
-  }
+  const{error}=await sb.auth.signInWithOAuth({
+    provider:'google',
+    options:{redirectTo:window.location.href,queryParams:{prompt:'select_account'}}
+  });
+  if(error)showToast('שגיאה: '+error.message);
 };
-window.doSignOut=async()=>{closeMenus();await fbSO(auth);showScreen('landing');showToast('התנתקת');};
+
+window.doSignOut=async()=>{
+  closeMenus();
+  await sb.auth.signOut();
+  CU=null;showScreen('landing');showToast('התנתקת');
+};
 
 window.openAuthSheet=(mode)=>{
   const isReg=mode==='register';
@@ -1289,10 +1274,9 @@ window.openAuthSheet=(mode)=>{
   document.getElementById('authToggleHint').innerHTML=isReg
     ?'כבר יש לך חשבון? <span class="auth-link" onclick="openAuthSheet(\'login\')">כניסה</span>'
     :'אין לך חשבון? <span class="auth-link" onclick="openAuthSheet(\'register\')">הרשמה</span>';
-  document.getElementById('authEmail').value='';
-  document.getElementById('authPassword').value='';
-  document.getElementById('authName').value='';
-  document.getElementById('authError').textContent='';
+  ['authEmail','authPassword','authName'].forEach(x=>document.getElementById(x).value='');
+  const err=document.getElementById('authError');
+  err.textContent='';err.style.color='var(--rose)';
   document.getElementById('olAuth').classList.add('show');
   window._authMode=mode;
 };
@@ -1302,7 +1286,7 @@ window.submitAuth=async()=>{
   const pass=document.getElementById('authPassword').value;
   const name=document.getElementById('authName').value.trim();
   const errEl=document.getElementById('authError');
-  errEl.textContent='';
+  errEl.textContent='';errEl.style.color='var(--rose)';
   if(!email||!pass){errEl.textContent='אנא מלא אימייל וסיסמה';return;}
   if(window._authMode==='register'&&!name){errEl.textContent='אנא הכנס שם מלא';return;}
   if(pass.length<6){errEl.textContent='הסיסמה חייבת להיות לפחות 6 תווים';return;}
@@ -1310,91 +1294,109 @@ window.submitAuth=async()=>{
   btn.textContent='רגע...';btn.disabled=true;
   try{
     if(window._authMode==='register'){
-      const cred=await createUserWithEmailAndPassword(auth,email,pass);
-      await updateProfile(cred.user,{displayName:name});
+      const{data,error}=await sb.auth.signUp({email,password:pass,options:{data:{full_name:name}}});
+      if(error)throw error;
+      if(data.user&&!data.session){
+        errEl.style.color='var(--green)';
+        errEl.textContent='נשלח אימות לאימייל שלך — בדוק את תיבת הדואר';
+        return;
+      }
     }else{
-      await signInWithEmailAndPassword(auth,email,pass);
+      const{error}=await sb.auth.signInWithPassword({email,password:pass});
+      if(error)throw error;
     }
     closeOlDirect('olAuth');
   }catch(e){
     const msgs={
-      'auth/email-already-in-use':'האימייל הזה כבר רשום',
-      'auth/invalid-email':'אימייל לא תקין',
-      'auth/wrong-password':'סיסמה שגויה',
-      'auth/user-not-found':'משתמש לא נמצא',
-      'auth/invalid-credential':'אימייל או סיסמה שגויים',
-      'auth/too-many-requests':'יותר מדי ניסיונות, נסה שוב מאוחר יותר',
+      'User already registered':'האימייל הזה כבר רשום',
+      'Email already registered':'האימייל הזה כבר רשום',
+      'Invalid login credentials':'אימייל או סיסמה שגויים',
+      'Email not confirmed':'יש לאמת את האימייל תחילה',
+      'Invalid email':'אימייל לא תקין',
+      'Password should be at least 6 characters':'הסיסמה חייבת להיות לפחות 6 תווים',
     };
-    errEl.textContent=msgs[e.code]||e.message;
+    errEl.textContent=msgs[e.message]||e.message;
   }finally{
     btn.textContent=window._authMode==='register'?'הרשמה ←':'כניסה ←';
     btn.disabled=false;
   }
 };
 
-onAuthStateChanged(auth,async user=>{
-  if(user){
-    CU=user;
-    await set(ref(db,`users/${user.uid}`),{name:user.displayName,email:user.email,photo:user.photoURL||'',lastSeen:Date.now()});
-    setupHome(user);
+sb.auth.onAuthStateChange(async(event,session)=>{
+  if(session?.user){
+    CU=session.user;
+    const displayName=CU.user_metadata?.full_name||CU.user_metadata?.name||CU.email.split('@')[0];
+    await sb.from('users').upsert({
+      id:CU.id,email:CU.email,name:displayName,
+      photo_url:CU.user_metadata?.avatar_url||CU.user_metadata?.picture||'',
+      last_seen:new Date().toISOString()
+    },{onConflict:'id'});
+    CU._name=displayName;
+    setupHome();
     const p=new URLSearchParams(window.location.search);
     const shared=p.get('trip');
     if(shared){window.history.replaceState({},'',window.location.pathname);await openTrip(shared);}
     else showScreen('home');
-  }else{CU=null;showScreen('landing');}
+  }else{
+    CU=null;showScreen('landing');
+  }
   hideLoader();
 });
 
 // ── HOME ──
-function setupHome(u){
-  document.getElementById('greetName').textContent=u.displayName?.split(' ')[0]||'חבר';
-  buildAvatar(u);
-  document.getElementById('pmName').textContent=u.displayName||'';
-  document.getElementById('pmEmail').textContent=u.email||'';
+function setupHome(){
+  document.getElementById('greetName').textContent=(CU._name||'חבר').split(' ')[0];
+  buildAvatar();
+  document.getElementById('pmName').textContent=CU._name||'';
+  document.getElementById('pmEmail').textContent=CU.email||'';
   loadTrips();
 }
-function buildAvatar(u){
+function buildAvatar(){
   const el=document.getElementById('avatarWrap');
-  if(u.photoURL){
-    el.innerHTML=`<div class="avatar-btn" onclick="toggleMenu()"><img src="${u.photoURL}"></div>`;
+  const photo=CU?.user_metadata?.avatar_url||CU?.user_metadata?.picture||'';
+  if(photo){
+    el.innerHTML=`<div class="avatar-btn" onclick="toggleMenu()"><img src="${photo}"></div>`;
   }else{
-    const i=(u.displayName||'U').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const i=(CU._name||'U').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
     el.innerHTML=`<div class="avatar-btn" onclick="toggleMenu()">${i}</div>`;
   }
 }
-function loadTrips(){
-  onValue(ref(db,`userTrips/${CU.uid}`),snap=>{
-    const data=snap.val()||{};
-    const ids=Object.keys(data);
-    document.getElementById('tripsCount').textContent=ids.length?`${ids.length} טיולים`:'';
-    if(!ids.length){
-      document.getElementById('tripsList').innerHTML=`<div class="empty-state"><div class="empty-icon">🗺️</div><div class="empty-title">עדיין אין טיולים</div><div class="empty-desc">לחץ על "טיול חדש" כדי להתחיל</div></div>`;
-      return;
-    }
-    Promise.all(ids.map(id=>get(ref(db,`trips/${id}`)).then(s=>({id,d:s.val()})))).then(trips=>{
-      trips.sort((a,b)=>(b.d?.createdAt||0)-(a.d?.createdAt||0));
-      document.getElementById('tripsList').innerHTML=trips.map(({id,d})=>{
-        if(!d)return'';
-        const ev=d.days?Object.values(d.days).reduce((s,x)=>s+(x.events?Object.keys(x.events).length:0),0):0;
-        const days=d.startDate&&d.endDate?Math.round((new Date(d.endDate)-new Date(d.startDate))/86400000)+1:0;
-        const shared=d.collaborators&&Object.keys(d.collaborators).length>1;
-        return`<div class="trip-card reveal" onclick="openTrip('${id}')">
-          <div class="tc-emoji-wrap">${d.emoji||'✈️'}</div>
-          <div class="tc-body">
-            <div class="tc-name">${d.name||'טיול ללא שם'}</div>
-            <div class="tc-meta">
-              ${d.destination?`<span class="tc-chip">📍 ${d.destination}</span>`:''}
-              ${days?`<span class="tc-chip">🗓️ ${days} ימים</span>`:''}
-              <span class="tc-chip">📌 ${ev}</span>
-              ${shared?'<span class="tc-chip tc-shared">👥 משותף</span>':''}
-            </div>
-          </div>
-          <div class="tc-arrow">›</div>
-        </div>`;
-      }).join('');
-      setTimeout(initReveal,100);
-    });
-  });
+async function loadTrips(){
+  const{data:cols}=await sb.from('trip_collaborators').select('trip_id').eq('user_id',CU.id);
+  if(!cols?.length){
+    document.getElementById('tripsCount').textContent='';
+    document.getElementById('tripsList').innerHTML=`<div class="empty-state"><div class="empty-icon">🗺️</div><div class="empty-title">עדיין אין טיולים</div><div class="empty-desc">לחץ על "טיול חדש" כדי להתחיל</div></div>`;
+    return;
+  }
+  const ids=cols.map(c=>c.trip_id);
+  const[{data:trips},{data:evRows},{data:allCols}]=await Promise.all([
+    sb.from('trips').select('*').in('id',ids).order('created_at',{ascending:false}),
+    sb.from('events').select('trip_id').in('trip_id',ids),
+    sb.from('trip_collaborators').select('trip_id').in('trip_id',ids)
+  ]);
+  const evCnt={},colCnt={};
+  (evRows||[]).forEach(e=>{evCnt[e.trip_id]=(evCnt[e.trip_id]||0)+1;});
+  (allCols||[]).forEach(c=>{colCnt[c.trip_id]=(colCnt[c.trip_id]||0)+1;});
+  document.getElementById('tripsCount').textContent=trips.length?`${trips.length} טיולים`:'';
+  document.getElementById('tripsList').innerHTML=(trips||[]).map(t=>{
+    const ev=evCnt[t.id]||0;
+    const days=t.start_date&&t.end_date?Math.round((new Date(t.end_date)-new Date(t.start_date))/86400000)+1:0;
+    const shared=(colCnt[t.id]||1)>1;
+    return`<div class="trip-card reveal" onclick="openTrip('${t.id}')">
+      <div class="tc-emoji-wrap">${t.emoji||'✈️'}</div>
+      <div class="tc-body">
+        <div class="tc-name">${t.name||'טיול ללא שם'}</div>
+        <div class="tc-meta">
+          ${t.destination?`<span class="tc-chip">📍 ${t.destination}</span>`:''}
+          ${days?`<span class="tc-chip">🗓️ ${days} ימים</span>`:''}
+          <span class="tc-chip">📌 ${ev}</span>
+          ${shared?'<span class="tc-chip tc-shared">👥 משותף</span>':''}
+        </div>
+      </div>
+      <div class="tc-arrow">›</div>
+    </div>`;
+  }).join('');
+  setTimeout(initReveal,100);
 }
 
 // ── NEW TRIP ──
@@ -1409,42 +1411,52 @@ window.createTrip=async()=>{
   const emoji=document.querySelector('.ep-item.sel')?.textContent||'✈️';
   const name=document.getElementById('newTripName').value.trim();
   const dest=document.getElementById('newTripDest').value.trim();
-  const start=document.getElementById('newTripStart').value;
-  const end=document.getElementById('newTripEnd').value;
+  const start=document.getElementById('newTripStart').value||null;
+  const end=document.getElementById('newTripEnd').value||null;
   if(!name){showToast('אנא הכנס שם לטיול');return;}
-  const tr=push(ref(db,'trips'));
-  const id=tr.key;
-  await set(tr,{id,name,emoji,destination:dest,startDate:start,endDate:end,createdAt:Date.now(),createdBy:CU.uid,collaborators:{[CU.uid]:{name:CU.displayName,role:'owner',joinedAt:Date.now()}},days:{},notes:''});
-  await set(ref(db,`userTrips/${CU.uid}/${id}`),true);
+  const{data:trip,error}=await sb.from('trips').insert({
+    owner_id:CU.id,name,emoji,destination:dest||null,start_date:start,end_date:end,notes:''
+  }).select().single();
+  if(error){showToast('שגיאה: '+error.message);return;}
+  await sb.from('trip_collaborators').insert({trip_id:trip.id,user_id:CU.id,role:'owner'});
   ['newTripName','newTripDest','newTripStart','newTripEnd'].forEach(x=>document.getElementById(x).value='');
   showToast('✓ הטיול נוצר!');
-  await openTrip(id);
+  await openTrip(trip.id);
 };
 
 // ── OPEN TRIP ──
 async function openTrip(id){
   CTripId=id;CDayIdx=0;
-  const s=await get(ref(db,`trips/${id}`));
-  CTrip=s.val();if(!CTrip){showToast('טיול לא נמצא');return;}
-  if(!CTrip.collaborators?.[CU.uid]){
-    await update(ref(db,`trips/${id}/collaborators/${CU.uid}`),{name:CU.displayName,role:'viewer',joinedAt:Date.now()});
-    await set(ref(db,`userTrips/${CU.uid}/${id}`),true);
+  const[{data:trip},{data:days},{data:events},{data:collabs}]=await Promise.all([
+    sb.from('trips').select('*').eq('id',id).single(),
+    sb.from('trip_days').select('*').eq('trip_id',id).order('day_index'),
+    sb.from('events').select('*').eq('trip_id',id).order('sort_order').order('time'),
+    sb.from('trip_collaborators').select('*,users(name,photo_url,email)').eq('trip_id',id)
+  ]);
+  if(!trip){showToast('טיול לא נמצא');return;}
+  CTrip={...trip,days:days||[],events:events||[],collaborators:collabs||[]};
+  if(!CTrip.collaborators.some(c=>c.user_id===CU.id)){
+    await sb.from('trip_collaborators').insert({trip_id:id,user_id:CU.id,role:'viewer'});
+    CTrip.collaborators.push({user_id:CU.id,role:'viewer',users:{name:CU._name}});
   }
-  off(ref(db,`trips/${id}`));
-  onValue(ref(db,`trips/${id}`),snap=>{CTrip=snap.val();if(CTrip)renderTripDetail();});
-  const url=`${location.origin}${location.pathname}?trip=${id}`;
-  document.getElementById('shareUrl').textContent=url;
+  if(rtChannel)sb.removeChannel(rtChannel);
+  rtChannel=sb.channel('trip-'+id)
+    .on('postgres_changes',{event:'*',schema:'public',table:'events',filter:`trip_id=eq.${id}`},
+      async()=>{const r=await sb.from('events').select('*').eq('trip_id',id).order('sort_order').order('time');CTrip.events=r.data||[];renderSchedule();})
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'trips',filter:`id=eq.${id}`},
+      async()=>{const r=await sb.from('trips').select('*').eq('id',id).single();if(r.data){CTrip={...CTrip,...r.data};renderTripDetail();}})
+    .subscribe();
+  document.getElementById('shareUrl').textContent=`${location.origin}${location.pathname}?trip=${id}`;
   showScreen('trip');
 }
 window.openTrip=openTrip;
 
 function renderTripDetail(){
-  const t=CTrip;
-  document.getElementById('tdEmoji').textContent=t.emoji||'✈️';
-  document.getElementById('tdName').textContent=t.name||'—';
-  document.getElementById('tdDest').textContent=t.destination||'יעד לא הוגדר';
-  const s=t.startDate?fmtDate(t.startDate):'';
-  const e=t.endDate?fmtDate(t.endDate):'';
+  document.getElementById('tdEmoji').textContent=CTrip.emoji||'✈️';
+  document.getElementById('tdName').textContent=CTrip.name||'—';
+  document.getElementById('tdDest').textContent=CTrip.destination||'יעד לא הוגדר';
+  const s=CTrip.start_date?fmtDate(CTrip.start_date):'';
+  const e=CTrip.end_date?fmtDate(CTrip.end_date):'';
   document.getElementById('tdDates').textContent=s&&e?`${s} – ${e}`:s||'תאריכים לא הוגדרו';
   renderDayPills();renderSchedule();renderNotes();renderCollabs();
 }
@@ -1452,13 +1464,12 @@ function fmtDate(d){const[y,m,day]=d.split('-');return`${day}.${m}.${y}`;}
 
 // ── DAYS ──
 function getDays(){
-  const t=CTrip;
-  if(!t?.startDate||!t?.endDate)return[{lbl:'יום 1',day:'א׳',key:'day_0'}];
-  const start=new Date(t.startDate),end=new Date(t.endDate),days=[];
+  if(!CTrip?.start_date||!CTrip?.end_date)return[{lbl:'יום 1',day:'א׳'}];
+  const start=new Date(CTrip.start_date),end=new Date(CTrip.end_date),days=[];
   const WD=['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
   for(let d=new Date(start);d<=end;d.setDate(d.getDate()+1)){
     const dd=String(d.getDate()).padStart(2,'0'),mm=String(d.getMonth()+1).padStart(2,'0');
-    days.push({lbl:`${dd}.${mm}`,day:WD[d.getDay()],key:`day_${days.length}`});
+    days.push({lbl:`${dd}.${mm}`,day:WD[d.getDay()]});
   }
   return days;
 }
@@ -1474,29 +1485,22 @@ function renderDayPills(){
 window.selDay=i=>{CDayIdx=i;renderDayPills();renderSchedule();};
 
 const TAGS={
-  sight:{p:'pill-sight',l:'📍 אטרקציה'},
-  food:{p:'pill-food',l:'🍽️ אוכל'},
-  sleep:{p:'pill-sleep',l:'🏨 מלון'},
-  shop:{p:'pill-shop',l:'🛍️ קניות'},
-  night:{p:'pill-night',l:'🌙 לילה'},
-  move:{p:'pill-move',l:'🚇 נסיעה'},
+  sight:{p:'pill-sight',l:'📍 אטרקציה'},food:{p:'pill-food',l:'🍽️ אוכל'},
+  sleep:{p:'pill-sleep',l:'🏨 מלון'},shop:{p:'pill-shop',l:'🛍️ קניות'},
+  night:{p:'pill-night',l:'🌙 לילה'},move:{p:'pill-move',l:'🚇 נסיעה'},
 };
 
 function renderSchedule(){
-  const days=getDays(),dk=days[CDayIdx]?.key||'day_0';
-  const evs=CTrip?.days?.[dk]?.events||{};
-  const sorted=Object.entries(evs).sort(([,a],[,b])=>(a.time||'').localeCompare(b.time||''));
+  const curDay=CTrip.days?.find(d=>d.day_index===CDayIdx);
+  const dayEvs=curDay?(CTrip.events||[]).filter(e=>e.day_id===curDay.id):[];
+  dayEvs.sort((a,b)=>(a.time||'').localeCompare(b.time||''));
   const body=document.getElementById('tlBody');
-  document.getElementById('addEvBtn').onclick=()=>openAddEvent(dk);
-  if(!sorted.length){
-    body.innerHTML=`<div class="empty-state" style="border:1.5px dashed var(--border-2)">
-      <div class="empty-icon">📅</div>
-      <div class="empty-title">אין אירועים ביום הזה</div>
-      <div class="empty-desc">לחץ + כדי להוסיף</div>
-    </div>`;
+  document.getElementById('addEvBtn').onclick=()=>openAddEvent(CDayIdx);
+  if(!dayEvs.length){
+    body.innerHTML=`<div class="empty-state" style="border:1.5px dashed var(--border-2)"><div class="empty-icon">📅</div><div class="empty-title">אין אירועים ביום הזה</div><div class="empty-desc">לחץ + כדי להוסיף</div></div>`;
     return;
   }
-  body.innerHTML=sorted.map(([evId,ev],i)=>`
+  body.innerHTML=dayEvs.map((ev,i)=>`
     <div class="tl-item" style="animation-delay:${i*.04}s">
       <div class="tl-dot"></div>
       <div class="tl-card" onclick="toggleEv(this)">
@@ -1508,14 +1512,14 @@ function renderSchedule(){
         </div>
         <div class="tl-tags"><span class="pill ${TAGS[ev.tag]?.p||'pill-sight'}">${TAGS[ev.tag]?.l||'📍 אטרקציה'}</span></div>
         <div class="tl-body">
-          ${ev.desc?`<div class="tl-desc">${ev.desc}</div>`:''}
+          ${ev.description?`<div class="tl-desc">${ev.description}</div>`:''}
           ${ev.how?`<div class="info-block ib-nav"><div class="info-lbl">🚇 איך מגיעים</div><div class="info-text">${ev.how}</div></div>`:''}
-          ${ev.warn?`<div class="info-block ib-warn"><div class="info-lbl">⚠️ אזהרה</div><div class="info-text">${ev.warn}</div></div>`:''}
+          ${ev.warning?`<div class="info-block ib-warn"><div class="info-lbl">⚠️ אזהרה</div><div class="info-text">${ev.warning}</div></div>`:''}
           ${ev.tip?`<div class="info-block ib-tip"><div class="info-lbl">💡 טיפ</div><div class="info-text">${ev.tip}</div></div>`:''}
-          ${ev.addr?`<button class="naver-btn" onclick="event.stopPropagation();naverMap('${esc(ev.addr)}')">📍 פתח ב-Naver Map</button>`:''}
+          ${ev.address?`<button class="naver-btn" onclick="event.stopPropagation();naverMap('${esc(ev.address)}')">📍 פתח ב-Naver Map</button>`:''}
           <div class="event-acts">
-            <button class="ev-act edit" onclick="event.stopPropagation();openEditEvent('${dk}','${evId}')">✏️ ערוך</button>
-            <button class="ev-act del" onclick="event.stopPropagation();delEvById('${dk}','${evId}')">🗑️ מחק</button>
+            <button class="ev-act edit" onclick="event.stopPropagation();openEditEvent('${ev.id}')">✏️ ערוך</button>
+            <button class="ev-act del" onclick="event.stopPropagation();delEvById('${ev.id}')">🗑️ מחק</button>
           </div>
         </div>
       </div>
@@ -1524,54 +1528,81 @@ function renderSchedule(){
 window.toggleEv=el=>{el.classList.toggle('open');el.querySelector('.tl-body').classList.toggle('show');};
 
 // ── EVENTS ──
-window.openAddEvent=(dk)=>{
-  EvCtx={dk,evId:null};
+window.openAddEvent=(dayIndex)=>{
+  EvCtx={dayIndex,eventId:null};
   document.getElementById('evSheetTitle').textContent='הוסף אירוע';
   document.getElementById('evDelBtn').style.display='none';
   ['evTime','evEmoji','evName','evDesc','evAddr','evHow','evWarn','evTip'].forEach(x=>document.getElementById(x).value='');
   document.getElementById('evTag').value='sight';
   document.getElementById('olEvent').classList.add('show');
 };
-window.openEditEvent=(dk,evId)=>{
-  const ev=CTrip.days[dk]?.events?.[evId];if(!ev)return;
-  EvCtx={dk,evId};
+window.openEditEvent=(eventId)=>{
+  const ev=CTrip.events?.find(e=>e.id===eventId);if(!ev)return;
+  EvCtx={dayIndex:CDayIdx,eventId};
   document.getElementById('evSheetTitle').textContent='ערוך אירוע';
   document.getElementById('evDelBtn').style.display='';
   document.getElementById('evTime').value=ev.time||'';
   document.getElementById('evEmoji').value=ev.emoji||'';
   document.getElementById('evName').value=ev.name||'';
-  document.getElementById('evDesc').value=ev.desc||'';
-  document.getElementById('evAddr').value=ev.addr||'';
+  document.getElementById('evDesc').value=ev.description||'';
+  document.getElementById('evAddr').value=ev.address||'';
   document.getElementById('evHow').value=ev.how||'';
-  document.getElementById('evWarn').value=ev.warn||'';
+  document.getElementById('evWarn').value=ev.warning||'';
   document.getElementById('evTip').value=ev.tip||'';
   document.getElementById('evTag').value=ev.tag||'sight';
   document.getElementById('olEvent').classList.add('show');
 };
 window.saveEvent=async()=>{
   if(!EvCtx)return;
-  const ev={time:document.getElementById('evTime').value||'00:00',emoji:document.getElementById('evEmoji').value||'📍',name:document.getElementById('evName').value||'אירוע',desc:document.getElementById('evDesc').value,addr:document.getElementById('evAddr').value,how:document.getElementById('evHow').value,warn:document.getElementById('evWarn').value,tip:document.getElementById('evTip').value,tag:document.getElementById('evTag').value};
-  if(EvCtx.evId)await update(ref(db,`trips/${CTripId}/days/${EvCtx.dk}/events/${EvCtx.evId}`),ev);
-  else{const r=push(ref(db,`trips/${CTripId}/days/${EvCtx.dk}/events`));await set(r,ev);}
-  closeOlDirect('olEvent');showToast('✓ נשמר');
+  const evData={
+    time:document.getElementById('evTime').value||'00:00',
+    emoji:document.getElementById('evEmoji').value||'📍',
+    name:document.getElementById('evName').value||'אירוע',
+    description:document.getElementById('evDesc').value,
+    address:document.getElementById('evAddr').value,
+    how:document.getElementById('evHow').value,
+    warning:document.getElementById('evWarn').value,
+    tip:document.getElementById('evTip').value,
+    tag:document.getElementById('evTag').value
+  };
+  if(EvCtx.eventId){
+    const{error}=await sb.from('events').update(evData).eq('id',EvCtx.eventId);
+    if(!error){const i=CTrip.events.findIndex(e=>e.id===EvCtx.eventId);if(i>-1)CTrip.events[i]={...CTrip.events[i],...evData};}
+  }else{
+    let day=CTrip.days?.find(d=>d.day_index===EvCtx.dayIndex);
+    if(!day){
+      const{data:nd}=await sb.from('trip_days').insert({trip_id:CTripId,day_index:EvCtx.dayIndex,label:`יום ${EvCtx.dayIndex+1}`}).select().single();
+      day=nd;CTrip.days=[...(CTrip.days||[]),day];
+    }
+    const{data:ne}=await sb.from('events').insert({...evData,day_id:day.id,trip_id:CTripId,sort_order:(CTrip.events||[]).filter(e=>e.day_id===day.id).length}).select().single();
+    if(ne)CTrip.events=[...(CTrip.events||[]),ne];
+  }
+  closeOlDirect('olEvent');showToast('✓ נשמר');renderSchedule();
 };
-window.deleteEvent=()=>{if(EvCtx?.evId)delEvById(EvCtx.dk,EvCtx.evId);closeOlDirect('olEvent');};
-window.delEvById=async(dk,evId)=>{if(!confirm('למחוק?'))return;await remove(ref(db,`trips/${CTripId}/days/${dk}/events/${evId}`));showToast('✓ נמחק');};
+window.deleteEvent=()=>{if(EvCtx?.eventId)delEvById(EvCtx.eventId);closeOlDirect('olEvent');};
+window.delEvById=async(evId)=>{
+  if(!confirm('למחוק?'))return;
+  await sb.from('events').delete().eq('id',evId);
+  CTrip.events=(CTrip.events||[]).filter(e=>e.id!==evId);
+  showToast('✓ נמחק');renderSchedule();
+};
 
 // ── NOTES / SHARE ──
 function renderNotes(){document.getElementById('notesTA').value=CTrip?.notes||'';}
-window.saveNotes=async()=>{await update(ref(db,`trips/${CTripId}`),{notes:document.getElementById('notesTA').value});showToast('✓ הערות נשמרו');};
+window.saveNotes=async()=>{
+  await sb.from('trips').update({notes:document.getElementById('notesTA').value}).eq('id',CTripId);
+  showToast('✓ הערות נשמרו');
+};
 window.copyLink=()=>{navigator.clipboard.writeText(document.getElementById('shareUrl').textContent).then(()=>showToast('✓ קישור הועתק!'));};
 window.doShareBtn=()=>showTabFn('share',document.querySelectorAll('.tn-btn')[2]);
 
 function renderCollabs(){
-  const cl=CTrip?.collaborators||{};
-  const items=Object.entries(cl);
-  document.getElementById('collabList').innerHTML=items.length?items.map(([uid,c])=>`
+  const cl=CTrip?.collaborators||[];
+  document.getElementById('collabList').innerHTML=cl.length?cl.map(c=>`
     <div class="collab-row">
-      <div class="collab-av">${(c.name||'?')[0]}</div>
+      <div class="collab-av">${(c.users?.name||'?')[0]}</div>
       <div>
-        <div class="collab-name">${c.name||'משתמש'}</div>
+        <div class="collab-name">${c.users?.name||'משתמש'}</div>
         <div class="collab-role">${c.role==='owner'?'בעלים':'משתתף'}</div>
       </div>
       <span class="role-badge ${c.role==='owner'?'rb-owner':'rb-viewer'}">${c.role==='owner'?'👑 בעלים':'👤 משתתף'}</span>
@@ -1580,52 +1611,50 @@ function renderCollabs(){
 
 // ── EDIT / DELETE TRIP ──
 window.editTrip=()=>{
-  const t=CTrip;
-  document.getElementById('etName').value=t.name||'';
-  document.getElementById('etDest').value=t.destination||'';
-  document.getElementById('etStart').value=t.startDate||'';
-  document.getElementById('etEnd').value=t.endDate||'';
+  document.getElementById('etName').value=CTrip.name||'';
+  document.getElementById('etDest').value=CTrip.destination||'';
+  document.getElementById('etStart').value=CTrip.start_date||'';
+  document.getElementById('etEnd').value=CTrip.end_date||'';
   document.getElementById('olEditTrip').classList.add('show');
 };
 window.saveEditTrip=async()=>{
-  await update(ref(db,`trips/${CTripId}`),{name:document.getElementById('etName').value,destination:document.getElementById('etDest').value,startDate:document.getElementById('etStart').value,endDate:document.getElementById('etEnd').value});
+  const upd={name:document.getElementById('etName').value,destination:document.getElementById('etDest').value,start_date:document.getElementById('etStart').value||null,end_date:document.getElementById('etEnd').value||null};
+  await sb.from('trips').update(upd).eq('id',CTripId);
+  CTrip={...CTrip,...upd};renderTripDetail();
   closeOlDirect('olEditTrip');showToast('✓ עודכן');
 };
 window.deleteTrip=async()=>{
   if(!confirm(`למחוק "${CTrip?.name}"?`))return;
-  await remove(ref(db,`trips/${CTripId}`));
-  await remove(ref(db,`userTrips/${CU.uid}/${CTripId}`));
+  await sb.from('trips').delete().eq('id',CTripId);
+  if(rtChannel)sb.removeChannel(rtChannel);
   showScreen('home');showToast('✓ הטיול נמחק');
 };
 
 // ── ADMIN ──
 window.goAdmin=async()=>{
   closeMenus();
-  const[tSnap,uSnap]=await Promise.all([get(ref(db,'trips')),get(ref(db,'users'))]);
-  const trips=tSnap.val()||{},users=uSnap.val()||{};
-  const tripList=Object.entries(trips);
-  document.getElementById('sTotal').textContent=tripList.length;
-  document.getElementById('sUsers').textContent=Object.keys(users).length;
+  const[{data:trips},{data:users},{data:evRows}]=await Promise.all([
+    sb.from('trips').select('*').order('created_at',{ascending:false}),
+    sb.from('users').select('id'),
+    sb.from('events').select('trip_id')
+  ]);
   const today=new Date().setHours(0,0,0,0);
-  document.getElementById('sToday').textContent=tripList.filter(([,t])=>(t.createdAt||0)>=today).length;
-  let totalEv=0;
-  tripList.forEach(([,t])=>{if(t.days)Object.values(t.days).forEach(d=>{if(d.events)totalEv+=Object.keys(d.events).length;});});
-  document.getElementById('sEvents').textContent=totalEv;
-  const sorted=tripList.sort(([,a],[,b])=>(b.createdAt||0)-(a.createdAt||0));
-  document.getElementById('adminList').innerHTML=sorted.map(([id,t])=>{
-    const ev=t.days?Object.values(t.days).reduce((s,d)=>s+(d.events?Object.keys(d.events).length:0),0):0;
-    const cl=t.collaborators?Object.keys(t.collaborators).length:1;
-    const cr=t.createdAt?new Date(t.createdAt).toLocaleDateString('he-IL'):'—';
-    return`<div class="admin-card" onclick="openTrip('${id}');showScreen('trip')">
+  const evCnt={};(evRows||[]).forEach(e=>{evCnt[e.trip_id]=(evCnt[e.trip_id]||0)+1;});
+  document.getElementById('sTotal').textContent=(trips||[]).length;
+  document.getElementById('sUsers').textContent=(users||[]).length;
+  document.getElementById('sToday').textContent=(trips||[]).filter(t=>new Date(t.created_at)>=today).length;
+  document.getElementById('sEvents').textContent=(evRows||[]).length;
+  document.getElementById('adminList').innerHTML=(trips||[]).map(t=>{
+    const ev=evCnt[t.id]||0;
+    const cr=t.created_at?new Date(t.created_at).toLocaleDateString('he-IL'):'—';
+    return`<div class="admin-card" onclick="openTrip('${t.id}');showScreen('trip')">
       <div class="ac-top">
         <span class="ac-emoji">${t.emoji||'✈️'}</span>
         <span class="ac-name">${t.name||'ללא שם'}</span>
         <span class="ac-date">${cr}</span>
       </div>
       <div class="ac-chips">
-        <span class="ac-chip chip-users">👥 ${cl}</span>
         <span class="ac-chip chip-events">📌 ${ev} אירועים</span>
-        ${cl>1?'<span class="ac-chip chip-shared">✓ משותף</span>':''}
       </div>
     </div>`;
   }).join('')||'<div style="text-align:center;padding:32px;color:var(--ink-3)">אין טיולים</div>';
