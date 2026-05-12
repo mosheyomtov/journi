@@ -183,6 +183,15 @@ body {
 .landing-terms { text-align:center; font-size:12px; color:var(--ink-4); margin-top:16px; }
 .landing-terms a { color:var(--brand); text-decoration:none; }
 
+.landing-divider {
+  display:flex; align-items:center; gap:12px;
+  margin:16px 0; color:var(--ink-4); font-size:13px;
+}
+.landing-divider::before,.landing-divider::after {
+  content:''; flex:1; height:1px; background:var(--border);
+}
+.auth-link { color:var(--brand); cursor:pointer; font-weight:600; }
+
 /* ═══════════════════════════════
    APP SHELL (sticky header)
 ═══════════════════════════════ */
@@ -946,6 +955,11 @@ body {
       </svg>
       המשך עם Google
     </button>
+    <div class="landing-divider"><span>או</span></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn-primary btn-ghost" style="flex:1;padding:14px" onclick="openAuthSheet('login')">כניסה עם אימייל</button>
+      <button class="btn-primary btn-ghost" style="flex:1;padding:14px" onclick="openAuthSheet('register')">הרשמה</button>
+    </div>
     <div class="landing-terms">בהתחברות אתה מסכים ל<a href="#">תנאי השימוש</a></div>
   </div>
 </div>
@@ -1139,6 +1153,28 @@ body {
   </div>
 </div>
 
+<!-- Auth Sheet -->
+<div class="overlay" id="olAuth" onclick="closeOl(event,'olAuth')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="authSheetTitle">הרשמה</div>
+    <div id="authNameField">
+      <label class="field-label">שם מלא</label>
+      <input class="field-input" id="authName" placeholder="ישראל ישראלי" style="margin-bottom:12px">
+    </div>
+    <label class="field-label">אימייל</label>
+    <input class="field-input" id="authEmail" type="email" placeholder="you@example.com" style="margin-bottom:12px;direction:ltr;text-align:right">
+    <label class="field-label">סיסמה</label>
+    <input class="field-input" id="authPassword" type="password" placeholder="לפחות 6 תווים" style="margin-bottom:6px;direction:ltr;text-align:right">
+    <div id="authError" style="font-size:13px;color:var(--rose);min-height:20px;margin-bottom:12px;text-align:right"></div>
+    <div class="btn-stack">
+      <button class="btn-primary btn-brand" id="authSubmitBtn" onclick="submitAuth()">הרשמה ←</button>
+      <button class="btn-primary btn-ghost" onclick="closeOlDirect('olAuth')">ביטול</button>
+    </div>
+    <div id="authToggleHint" style="text-align:center;font-size:13px;color:var(--ink-3);margin-top:14px"></div>
+  </div>
+</div>
+
 <!-- SHEETS -->
 <!-- Event Sheet -->
 <div class="overlay" id="olEvent" onclick="closeOl(event,'olEvent')">
@@ -1207,7 +1243,7 @@ body {
 <!-- FIREBASE -->
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import{getAuth,signInWithRedirect,getRedirectResult,GoogleAuthProvider,signOut as fbSO,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import{getAuth,signInWithRedirect,getRedirectResult,GoogleAuthProvider,createUserWithEmailAndPassword,signInWithEmailAndPassword,updateProfile,signOut as fbSO,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import{getDatabase,ref,set,get,push,onValue,off,remove,update}from"https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const cfg={
@@ -1244,6 +1280,57 @@ window.signInGoogle=async()=>{
   }
 };
 window.doSignOut=async()=>{closeMenus();await fbSO(auth);showScreen('landing');showToast('התנתקת');};
+
+window.openAuthSheet=(mode)=>{
+  const isReg=mode==='register';
+  document.getElementById('authSheetTitle').textContent=isReg?'הרשמה':'כניסה';
+  document.getElementById('authNameField').style.display=isReg?'':'none';
+  document.getElementById('authSubmitBtn').textContent=isReg?'הרשמה ←':'כניסה ←';
+  document.getElementById('authToggleHint').innerHTML=isReg
+    ?'כבר יש לך חשבון? <span class="auth-link" onclick="openAuthSheet(\'login\')">כניסה</span>'
+    :'אין לך חשבון? <span class="auth-link" onclick="openAuthSheet(\'register\')">הרשמה</span>';
+  document.getElementById('authEmail').value='';
+  document.getElementById('authPassword').value='';
+  document.getElementById('authName').value='';
+  document.getElementById('authError').textContent='';
+  document.getElementById('olAuth').classList.add('show');
+  window._authMode=mode;
+};
+
+window.submitAuth=async()=>{
+  const email=document.getElementById('authEmail').value.trim();
+  const pass=document.getElementById('authPassword').value;
+  const name=document.getElementById('authName').value.trim();
+  const errEl=document.getElementById('authError');
+  errEl.textContent='';
+  if(!email||!pass){errEl.textContent='אנא מלא אימייל וסיסמה';return;}
+  if(window._authMode==='register'&&!name){errEl.textContent='אנא הכנס שם מלא';return;}
+  if(pass.length<6){errEl.textContent='הסיסמה חייבת להיות לפחות 6 תווים';return;}
+  const btn=document.getElementById('authSubmitBtn');
+  btn.textContent='רגע...';btn.disabled=true;
+  try{
+    if(window._authMode==='register'){
+      const cred=await createUserWithEmailAndPassword(auth,email,pass);
+      await updateProfile(cred.user,{displayName:name});
+    }else{
+      await signInWithEmailAndPassword(auth,email,pass);
+    }
+    closeOlDirect('olAuth');
+  }catch(e){
+    const msgs={
+      'auth/email-already-in-use':'האימייל הזה כבר רשום',
+      'auth/invalid-email':'אימייל לא תקין',
+      'auth/wrong-password':'סיסמה שגויה',
+      'auth/user-not-found':'משתמש לא נמצא',
+      'auth/invalid-credential':'אימייל או סיסמה שגויים',
+      'auth/too-many-requests':'יותר מדי ניסיונות, נסה שוב מאוחר יותר',
+    };
+    errEl.textContent=msgs[e.code]||e.message;
+  }finally{
+    btn.textContent=window._authMode==='register'?'הרשמה ←':'כניסה ←';
+    btn.disabled=false;
+  }
+};
 
 onAuthStateChanged(auth,async user=>{
   if(user){
