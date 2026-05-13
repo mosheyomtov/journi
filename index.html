@@ -1246,16 +1246,19 @@ import{createClient}from'https://esm.sh/@supabase/supabase-js@2';
 
 const sb=createClient(
   'https://dzbxnwmwvwqyhergwefh.supabase.co',
-  'sb_publishable_wd1l9Hb8aWY1NAD3Me1dtw_rOVfO7YI'
+  'sb_publishable_wd1l9Hb8aWY1NAD3Me1dtw_rOVfO7YI',
+  {auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true,flowType:'implicit'}}
 );
 
 let CU=null,CTripId=null,CTrip=null,CDayIdx=0,EvCtx=null,rtChannel=null;
 
 // ── AUTH ──
 window.signInGoogle=async()=>{
+  // URL נקי — ללא hash/params ישנים שעלולים לשבש את ה-redirect
+  const cleanUrl=`${window.location.origin}${window.location.pathname}`;
   const{error}=await sb.auth.signInWithOAuth({
     provider:'google',
-    options:{redirectTo:window.location.href,queryParams:{prompt:'select_account'}}
+    options:{redirectTo:cleanUrl,queryParams:{prompt:'select_account'}}
   });
   if(error)showToast('שגיאה: '+error.message);
 };
@@ -1322,25 +1325,45 @@ window.submitAuth=async()=>{
   }
 };
 
-sb.auth.onAuthStateChange(async(event,session)=>{
-  if(session?.user){
-    CU=session.user;
-    const displayName=CU.user_metadata?.full_name||CU.user_metadata?.name||CU.email.split('@')[0];
-    await sb.from('users').upsert({
-      id:CU.id,email:CU.email,name:displayName,
-      photo_url:CU.user_metadata?.avatar_url||CU.user_metadata?.picture||'',
-      last_seen:new Date().toISOString()
-    },{onConflict:'id'});
-    CU._name=displayName;
-    setupHome();
-    const p=new URLSearchParams(window.location.search);
-    const shared=p.get('trip');
-    if(shared){window.history.replaceState({},'',window.location.pathname);await openTrip(shared);}
-    else showScreen('home');
-  }else{
-    CU=null;showScreen('landing');
-  }
+// מטפל בכניסה — נקרא מ-onAuthStateChange
+async function handleSignIn(user){
+  CU=user;
+  const displayName=CU.user_metadata?.full_name||CU.user_metadata?.name||CU.email.split('@')[0];
+  await sb.from('users').upsert({
+    id:CU.id,email:CU.email,name:displayName,
+    photo_url:CU.user_metadata?.avatar_url||CU.user_metadata?.picture||'',
+    last_seen:new Date().toISOString()
+  },{onConflict:'id'});
+  CU._name=displayName;
+  setupHome();
+  const p=new URLSearchParams(window.location.search);
+  const shared=p.get('trip');
+  if(shared){window.history.replaceState({},'',window.location.pathname);await openTrip(shared);}
+  else showScreen('home');
   hideLoader();
+}
+
+sb.auth.onAuthStateChange(async(event,session)=>{
+  if(event==='SIGNED_IN'||event==='TOKEN_REFRESHED'||event==='USER_UPDATED'){
+    // כניסה מוצלחת — Google redirect, email/password, רענון token
+    await handleSignIn(session.user);
+  }else if(event==='SIGNED_OUT'){
+    CU=null;showScreen('landing');hideLoader();
+  }else if(event==='INITIAL_SESSION'){
+    if(session?.user){
+      // session קיים מ-localStorage
+      await handleSignIn(session.user);
+    }else{
+      // אין session — בדוק אם אנחנו באמצע OAuth redirect (hash עם access_token)
+      const hash=window.location.hash;
+      if(hash&&hash.includes('access_token')){
+        // implicit flow מעבד את ה-hash, SIGNED_IN יגיע מיד אחרי
+        // לא מציגים landing ולא מסתירים loader
+      }else{
+        showScreen('landing');hideLoader();
+      }
+    }
+  }
 });
 
 // ── HOME ──
