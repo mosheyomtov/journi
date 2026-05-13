@@ -1921,7 +1921,6 @@ window.openAddEvent=(dayIndex)=>{
   ['evTime','evEmoji','evName','evDesc','evWarn','evTip'].forEach(x=>document.getElementById(x).value='');
   document.getElementById('evTag').value='sight';
   clearPlaceSelection();
-  _gMap=null; _gMarker=null;
   ensureGooglePlaces();
   document.getElementById('olEvent').classList.add('show');
 };
@@ -1938,7 +1937,6 @@ window.openEditEvent=(eventId)=>{
   document.getElementById('evTip').value=ev.tip_text||ev.tip||'';
   document.getElementById('evTag').value=ev.category||ev.tag||'sight';
   clearPlaceSelection();
-  _gMap=null; _gMarker=null;
   if(ev.lat&&ev.lng){
     const lat=parseFloat(ev.lat), lng=parseFloat(ev.lng);
     const name=ev.place_name_en||ev.place_name_ko||'';
