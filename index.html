@@ -2019,37 +2019,10 @@ window.delEvById=async(evId)=>{
   showToast('✓ נמחק');renderSchedule();
 };
 
-// ── GOOGLE PLACES AUTOCOMPLETE ──
+// ── GOOGLE PLACES (New API — fetch only, no JS SDK) ──
 const GMAP_KEY='AIzaSyB63LFtOFf_65UkNG1vMTZ3NKLaEqSNhc4';
-let _mapsLoading=false;
-let _autoSvc=null;
-let _detailsSvc=null;
-let _sessionToken=null;
 let _searchTimer=null;
 
-// ── SDK loader ──
-window.initGooglePlaces=function(){
-  _autoSvc=new google.maps.places.AutocompleteService();
-  _detailsSvc=new google.maps.places.PlacesService(document.createElement('div'));
-  _sessionToken=new google.maps.places.AutocompleteSessionToken();
-  if(typeof window._gPlacesCb==='function'){window._gPlacesCb();window._gPlacesCb=null;}
-};
-
-function loadGoogleMaps(cb){
-  if(_autoSvc){cb();return;}
-  window._gPlacesCb=cb;
-  if(_mapsLoading)return;
-  _mapsLoading=true;
-  const s=document.createElement('script');
-  s.src='https://maps.googleapis.com/maps/api/js'
-      +'?key='+GMAP_KEY
-      +'&libraries=places&language=en&callback=initGooglePlaces';
-  s.async=true;
-  s.onerror=()=>{_mapsLoading=false;showToast('שגיאה בטעינת Google Maps');};
-  document.head.appendChild(s);
-}
-
-// ── Search input handler (called via oninput) ──
 window.onPlaceInput=function(){
   const q=document.getElementById('evPlaceSearch').value.trim();
   const dd=document.getElementById('placeDropdown');
@@ -2060,90 +2033,91 @@ window.onPlaceInput=function(){
   _searchTimer=setTimeout(()=>_runSearch(q),350);
 };
 
-function _runSearch(q){
-  if(!_autoSvc){
-    // SDK still loading — queue and wait
-    loadGoogleMaps(()=>_runSearch(q));
-    return;
-  }
-  // timeout guard — if callback never fires, show error after 6s
-  const ddRef=document.getElementById('placeDropdown');
-  let _cbFired=false;
-  const _timeout=setTimeout(()=>{
-    if(!_cbFired&&ddRef)ddRef.innerHTML='<div class="pri-item-loading">תם הזמן — בדוק חיבור לאינטרנט</div>';
-  },6000);
-
-  _autoSvc.getPlacePredictions(
-    {input:q,sessionToken:_sessionToken,componentRestrictions:{country:'kr'}},
-    (preds,status)=>{
-      _cbFired=true;
-      clearTimeout(_timeout);
-      const dd=document.getElementById('placeDropdown');
-      if(!dd)return;
-      const OK=google.maps.places.PlacesServiceStatus.OK;
-      const ZERO=google.maps.places.PlacesServiceStatus.ZERO_RESULTS;
-      if(status===OK&&preds?.length){
-        dd.innerHTML=preds.map(p=>{
-          const main=p.structured_formatting?.main_text||p.description;
-          const sec=p.structured_formatting?.secondary_text||'';
-          const safeId=encodeURIComponent(p.place_id);
-          const safeName=(main||'').replace(/'/g,'&#39;');
-          return`<div class="pri-item" onclick="onPlaceSelect('${safeId}','${safeName}')">
-            <div class="pri-main">${main}</div>
-            ${sec?`<div class="pri-sec">${sec}</div>`:''}
-          </div>`;
-        }).join('');
-      } else if(status===ZERO||!preds?.length){
-        dd.innerHTML='<div class="pri-item-loading">לא נמצאו תוצאות</div>';
-      } else {
-        // Show real status so we can diagnose
-        dd.innerHTML=`<div class="pri-item-loading">שגיאה: ${status}</div>`;
-        console.error('[Places] getPlacePredictions status:',status);
-      }
-      dd.style.display='block';
+async function _runSearch(q){
+  const dd=document.getElementById('placeDropdown');
+  if(!dd)return;
+  try{
+    const res=await fetch('https://places.googleapis.com/v1/places:autocomplete',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'X-Goog-Api-Key':GMAP_KEY
+      },
+      body:JSON.stringify({
+        input:q,
+        includedRegionCodes:['kr'],
+        languageCode:'en'
+      })
+    });
+    const data=await res.json();
+    if(!res.ok){
+      dd.innerHTML=`<div class="pri-item-loading">שגיאה: ${data?.error?.message||res.status}</div>`;
+      console.error('[Places] autocomplete error',data);
+      return;
     }
-  );
+    const suggestions=data.suggestions||[];
+    if(!suggestions.length){
+      dd.innerHTML='<div class="pri-item-loading">לא נמצאו תוצאות</div>';
+      return;
+    }
+    dd.innerHTML=suggestions.map(s=>{
+      const p=s.placePrediction;
+      const main=p?.structuredFormat?.mainText?.text||p?.text?.text||'';
+      const sec=p?.structuredFormat?.secondaryText?.text||'';
+      const placeId=encodeURIComponent(p?.placeId||'');
+      const safeName=main.replace(/'/g,'&#39;');
+      return`<div class="pri-item" onclick="onPlaceSelect('${placeId}','${safeName}')">
+        <div class="pri-main">${main}</div>
+        ${sec?`<div class="pri-sec">${sec}</div>`:''}
+      </div>`;
+    }).join('');
+    dd.style.display='block';
+  }catch(e){
+    dd.innerHTML=`<div class="pri-item-loading">שגיאת רשת — נסה שוב</div>`;
+    console.error('[Places] fetch error',e);
+  }
 }
 
-window.onPlaceSelect=function(encodedId,safeName){
+window.onPlaceSelect=async function(encodedId,safeName){
   const placeId=decodeURIComponent(encodedId);
   const displayName=safeName.replace(/&#39;/g,"'");
   document.getElementById('placeDropdown').style.display='none';
   document.getElementById('evPlaceSearch').value=displayName;
-  _detailsSvc.getDetails(
-    {placeId,fields:['name','formatted_address','geometry'],sessionToken:_sessionToken},
-    (place,status)=>{
-      // New session for next search
-      _sessionToken=new google.maps.places.AutocompleteSessionToken();
-      if(status!==google.maps.places.PlacesServiceStatus.OK||!place?.geometry?.location)return;
-      const lat=place.geometry.location.lat();
-      const lng=place.geometry.location.lng();
-      const name=place.name||displayName;
-      const addr=place.formatted_address||'';
-      document.getElementById('evLat').value=lat;
-      document.getElementById('evLng').value=lng;
-      document.getElementById('evPlaceNameEn').value=name;
-      document.getElementById('evPlaceNameKo').value=name;
-      document.getElementById('evKakaoId').value='';
-      document.getElementById('psName').textContent=name;
-      document.getElementById('psAddr').textContent=addr;
-      document.getElementById('psCoords').textContent=`${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-      document.getElementById('placeSelected').style.display='flex';
-      // Static map preview — no Maps JS rendering needed
-      const mapDiv=document.getElementById('evMapPreview');
-      mapDiv.style.display='block';
-      mapDiv.innerHTML=`<img
-        src="https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=15&size=600x200&scale=2&markers=color:red%7C${lat},${lng}&key=${GMAP_KEY}"
-        style="width:100%;height:180px;object-fit:cover;border-radius:12px"
-        onerror="this.parentElement.style.display='none'"
-        alt="${name}" loading="lazy">`;
-    }
-  );
+  try{
+    const res=await fetch(`https://places.googleapis.com/v1/places/${placeId}`,{
+      headers:{
+        'X-Goog-Api-Key':GMAP_KEY,
+        'X-Goog-FieldMask':'id,displayName,formattedAddress,location'
+      }
+    });
+    const place=await res.json();
+    if(!res.ok||!place?.location){console.error('[Places] details error',place);return;}
+    const lat=place.location.latitude;
+    const lng=place.location.longitude;
+    const name=place.displayName?.text||displayName;
+    const addr=place.formattedAddress||'';
+    document.getElementById('evLat').value=lat;
+    document.getElementById('evLng').value=lng;
+    document.getElementById('evPlaceNameEn').value=name;
+    document.getElementById('evPlaceNameKo').value=name;
+    document.getElementById('evKakaoId').value='';
+    document.getElementById('psName').textContent=name;
+    document.getElementById('psAddr').textContent=addr;
+    document.getElementById('psCoords').textContent=`${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    document.getElementById('placeSelected').style.display='flex';
+    const mapDiv=document.getElementById('evMapPreview');
+    mapDiv.style.display='block';
+    mapDiv.innerHTML=`<img
+      src="https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=15&size=600x200&scale=2&markers=color:red%7C${lat},${lng}&key=${GMAP_KEY}"
+      style="width:100%;height:180px;object-fit:cover;border-radius:12px"
+      onerror="this.parentElement.style.display='none'"
+      alt="${name}" loading="lazy">`;
+  }catch(e){
+    console.error('[Places] details fetch error',e);
+  }
 };
 
-function ensureGooglePlaces(){
-  loadGoogleMaps(()=>{}); // pre-load SDK on form open
-}
+function ensureGooglePlaces(){/* no-op: fetch-based, no SDK preload needed */}
 
 window.clearPlaceSelection=function(){
   ['evLat','evLng','evKakaoId','evPlaceNameKo','evPlaceNameEn'].forEach(id=>document.getElementById(id).value='');
