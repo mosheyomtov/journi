@@ -1077,7 +1077,7 @@ body {
     <div class="tab-pane active" id="tab-schedule">
       <div class="day-pills" id="dayPills"></div>
       <div class="timeline" id="tlBody"></div>
-      <button class="add-event-btn" id="addEvBtn" onclick="openAddEvent()">+ הוסף אירוע ליום</button>
+      <button class="add-event-btn" id="addEvBtn" onclick="openAddEvent(window._CDayIdx||0)">+ הוסף אירוע ליום</button>
     </div>
 
     <!-- NOTES -->
@@ -1251,6 +1251,7 @@ const sb=createClient(
 );
 
 let CU=null,CTripId=null,CTrip=null,CDayIdx=0,EvCtx=null,rtChannel=null;
+window._CDayIdx=0;
 
 // ── AUTH ──
 window.signInGoogle=async()=>{
@@ -1505,7 +1506,7 @@ function renderDayPills(){
       <span class="dp-lbl">יום ${i+1}</span>
     </div>`).join('');
 }
-window.selDay=i=>{CDayIdx=i;renderDayPills();renderSchedule();};
+window.selDay=i=>{CDayIdx=i;window._CDayIdx=i;renderDayPills();renderSchedule();};
 
 const TAGS={
   sight:{p:'pill-sight',l:'📍 אטרקציה'},food:{p:'pill-food',l:'🍽️ אוכל'},
@@ -1577,6 +1578,7 @@ window.openEditEvent=(eventId)=>{
 };
 window.saveEvent=async()=>{
   if(!EvCtx)return;
+  const btn=document.getElementById('evSheetTitle');
   const evData={
     time:document.getElementById('evTime').value||'00:00',
     emoji:document.getElementById('evEmoji').value||'📍',
@@ -1588,19 +1590,38 @@ window.saveEvent=async()=>{
     tip:document.getElementById('evTip').value,
     tag:document.getElementById('evTag').value
   };
-  if(EvCtx.eventId){
-    const{error}=await sb.from('events').update(evData).eq('id',EvCtx.eventId);
-    if(!error){const i=CTrip.events.findIndex(e=>e.id===EvCtx.eventId);if(i>-1)CTrip.events[i]={...CTrip.events[i],...evData};}
-  }else{
-    let day=CTrip.days?.find(d=>d.day_index===EvCtx.dayIndex);
-    if(!day){
-      const{data:nd}=await sb.from('trip_days').insert({trip_id:CTripId,day_index:EvCtx.dayIndex,label:`יום ${EvCtx.dayIndex+1}`}).select().single();
-      day=nd;CTrip.days=[...(CTrip.days||[]),day];
+  try{
+    if(EvCtx.eventId){
+      const{error}=await sb.from('events').update(evData).eq('id',EvCtx.eventId);
+      if(error)throw error;
+      const i=CTrip.events.findIndex(e=>e.id===EvCtx.eventId);
+      if(i>-1)CTrip.events[i]={...CTrip.events[i],...evData};
+    }else{
+      // מצא או צור trip_day עבור היום הנוכחי
+      let day=CTrip.days?.find(d=>d.day_index===EvCtx.dayIndex);
+      if(!day){
+        const{data:nd,error:de}=await sb.from('trip_days')
+          .insert({trip_id:CTripId,day_index:EvCtx.dayIndex,label:`יום ${EvCtx.dayIndex+1}`})
+          .select().single();
+        if(de)throw de;
+        if(!nd)throw new Error('לא הצלחנו ליצור את היום');
+        day=nd;
+        CTrip.days=[...(CTrip.days||[]),day];
+      }
+      const{data:ne,error:ee}=await sb.from('events')
+        .insert({...evData,day_id:day.id,trip_id:CTripId,
+          sort_order:(CTrip.events||[]).filter(e=>e.day_id===day.id).length})
+        .select().single();
+      if(ee)throw ee;
+      if(ne)CTrip.events=[...(CTrip.events||[]),ne];
     }
-    const{data:ne}=await sb.from('events').insert({...evData,day_id:day.id,trip_id:CTripId,sort_order:(CTrip.events||[]).filter(e=>e.day_id===day.id).length}).select().single();
-    if(ne)CTrip.events=[...(CTrip.events||[]),ne];
+    closeOlDirect('olEvent');
+    showToast('✓ נשמר');
+    renderSchedule();
+  }catch(e){
+    console.error('saveEvent error',e);
+    showToast('שגיאה בשמירה: '+(e.message||e.details||JSON.stringify(e)));
   }
-  closeOlDirect('olEvent');showToast('✓ נשמר');renderSchedule();
 };
 window.deleteEvent=()=>{if(EvCtx?.eventId)delEvById(EvCtx.eventId);closeOlDirect('olEvent');};
 window.delEvById=async(evId)=>{
