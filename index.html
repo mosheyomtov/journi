@@ -890,6 +890,67 @@ body {
 /* UTILS */
 .reveal { opacity:0; transform:translateY(12px); transition:opacity .5s ease,transform .5s var(--ease); }
 .reveal.visible { opacity:1; transform:translateY(0); }
+
+/* ═══════════════════════════════
+   SCREEN: PROFILE
+═══════════════════════════════ */
+#screen-profile { background:var(--bg); }
+
+.profile-hero {
+  background:linear-gradient(135deg,var(--brand) 0%,#6C8FF7 100%);
+  border-radius:var(--r-lg); padding:32px 20px 28px;
+  text-align:center; margin-bottom:24px;
+  box-shadow:0 8px 32px rgba(59,110,245,0.28);
+  position:relative; overflow:hidden;
+}
+.profile-hero::before {
+  content:''; position:absolute; top:-40px; right:-40px;
+  width:160px; height:160px; border-radius:50%;
+  background:rgba(255,255,255,0.07);
+}
+.profile-av-lg {
+  width:84px; height:84px; border-radius:50%;
+  background:rgba(255,255,255,0.22);
+  display:flex; align-items:center; justify-content:center;
+  font-size:30px; font-weight:800; color:#fff;
+  margin:0 auto 14px; border:3px solid rgba(255,255,255,0.4);
+  overflow:hidden; position:relative; z-index:1;
+}
+.profile-av-lg img { width:100%;height:100%;object-fit:cover; }
+.profile-hero-name { font-size:22px; font-weight:800; color:#fff; letter-spacing:-0.5px; }
+.profile-hero-email { font-size:13px; color:rgba(255,255,255,0.68); margin-top:5px; }
+.profile-hero-provider {
+  display:inline-flex; align-items:center; gap:5px;
+  background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25);
+  border-radius:20px; padding:4px 10px;
+  font-size:11px; font-weight:700; color:rgba(255,255,255,0.85);
+  margin-top:10px;
+}
+
+.settings-section { margin-bottom:20px; }
+.settings-label {
+  font-size:11px; font-weight:700; color:var(--ink-3);
+  text-transform:uppercase; letter-spacing:0.6px;
+  margin-bottom:8px; padding:0 4px;
+}
+.settings-card {
+  background:#fff; border:1px solid var(--border);
+  border-radius:var(--r); overflow:hidden; box-shadow:var(--sh-sm);
+}
+.settings-row {
+  display:flex; align-items:center; gap:14px;
+  padding:15px 16px; border-bottom:1px solid var(--border);
+  cursor:pointer; transition:background .15s;
+}
+.settings-row:last-child { border-bottom:none; }
+.settings-row:hover { background:var(--surface-2); }
+.settings-row:active { background:var(--surface-3); }
+.settings-row.danger .settings-row-title { color:var(--rose); }
+.settings-icon { font-size:20px; flex-shrink:0; width:26px; text-align:center; }
+.settings-row-body { flex:1; min-width:0; }
+.settings-row-title { font-size:15px; font-weight:600; color:var(--ink); }
+.settings-row-sub { font-size:12px; color:var(--ink-3); margin-top:2px; }
+.settings-chevron { color:var(--ink-4); font-size:20px; }
 </style>
 </head>
 <body>
@@ -903,14 +964,123 @@ body {
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<!-- PROFILE MENU -->
-<div class="profile-menu" id="profileMenu">
-  <div class="pm-user">
-    <div class="pm-name" id="pmName">—</div>
-    <div class="pm-email" id="pmEmail">—</div>
+<!-- ════════ PROFILE ════════ -->
+<div class="screen" id="screen-profile">
+  <div class="app-bar">
+    <button class="back-btn" onclick="showScreen('home')">← חזרה</button>
+    <div class="app-bar-logo">הגדרות</div>
+    <div style="width:36px"></div>
   </div>
-  <div class="pm-item" onclick="goAdmin()">⚡ Admin Dashboard</div>
-  <div class="pm-item danger" onclick="doSignOut()">← התנתק</div>
+  <div style="overflow-y:auto;flex:1">
+    <div style="padding:20px;padding-bottom:100px">
+
+      <!-- Hero -->
+      <div class="profile-hero">
+        <div class="profile-av-lg" id="profileAvLg"></div>
+        <div class="profile-hero-name" id="profileHeroName">—</div>
+        <div class="profile-hero-email" id="profileHeroEmail">—</div>
+        <div class="profile-hero-provider" id="profileProvider"></div>
+      </div>
+
+      <!-- פרופיל -->
+      <div class="settings-section">
+        <div class="settings-label">פרופיל</div>
+        <div class="settings-card">
+          <div class="settings-row" onclick="openEditName()">
+            <span class="settings-icon">✏️</span>
+            <div class="settings-row-body">
+              <div class="settings-row-title">שם תצוגה</div>
+              <div class="settings-row-sub" id="profileNameSub">—</div>
+            </div>
+            <span class="settings-chevron">›</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- אבטחה — מוצג רק למשתמשי אימייל -->
+      <div class="settings-section" id="securitySection">
+        <div class="settings-label">אבטחה</div>
+        <div class="settings-card">
+          <div class="settings-row" onclick="openChangePassword()">
+            <span class="settings-icon">🔒</span>
+            <div class="settings-row-body">
+              <div class="settings-row-title">שנה סיסמה</div>
+            </div>
+            <span class="settings-chevron">›</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- כללי -->
+      <div class="settings-section">
+        <div class="settings-label">כללי</div>
+        <div class="settings-card">
+          <div class="settings-row" onclick="goAdmin()">
+            <span class="settings-icon">⚡</span>
+            <div class="settings-row-body">
+              <div class="settings-row-title">Admin Dashboard</div>
+            </div>
+            <span class="settings-chevron">›</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- חשבון -->
+      <div class="settings-section">
+        <div class="settings-label">חשבון</div>
+        <div class="settings-card">
+          <div class="settings-row" onclick="doSignOut()">
+            <span class="settings-icon">🚪</span>
+            <div class="settings-row-body">
+              <div class="settings-row-title">התנתק</div>
+            </div>
+          </div>
+          <div class="settings-row danger" onclick="confirmDeleteAccount()">
+            <span class="settings-icon">🗑️</span>
+            <div class="settings-row-body">
+              <div class="settings-row-title">מחק חשבון</div>
+              <div class="settings-row-sub">מוחק את כל הנתונים לצמיתות</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align:center;font-size:11px;color:var(--ink-4);margin-top:8px">Journi v1.0</div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Name Sheet -->
+<div class="overlay" id="olEditName" onclick="closeOl(event,'olEditName')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">עריכת שם</div>
+    <label class="field-label">שם תצוגה</label>
+    <input class="field-input" id="editNameInput" placeholder="השם שלך" style="margin-bottom:20px">
+    <div class="btn-stack">
+      <button class="btn-primary btn-brand" onclick="saveProfileName()">שמור שם ←</button>
+      <button class="btn-primary btn-ghost" onclick="closeOlDirect('olEditName')">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- Change Password Sheet -->
+<div class="overlay" id="olChangePassword" onclick="closeOl(event,'olChangePassword')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">שינוי סיסמה</div>
+    <label class="field-label">סיסמה נוכחית</label>
+    <input class="field-input" id="cpCurrent" type="password" placeholder="••••••••" style="margin-bottom:12px;direction:ltr;text-align:right">
+    <label class="field-label">סיסמה חדשה</label>
+    <input class="field-input" id="cpNew" type="password" placeholder="לפחות 6 תווים" style="margin-bottom:12px;direction:ltr;text-align:right">
+    <label class="field-label">אימות סיסמה חדשה</label>
+    <input class="field-input" id="cpConfirm" type="password" placeholder="חזור על הסיסמה החדשה" style="margin-bottom:6px;direction:ltr;text-align:right">
+    <div id="cpError" style="font-size:13px;color:var(--rose);min-height:20px;margin-bottom:12px;text-align:right"></div>
+    <div class="btn-stack">
+      <button class="btn-primary btn-brand" id="cpSaveBtn" onclick="savePassword()">עדכן סיסמה ←</button>
+      <button class="btn-primary btn-ghost" onclick="closeOlDirect('olChangePassword')">ביטול</button>
+    </div>
+  </div>
 </div>
 
 <!-- ════════ LANDING ════════ -->
@@ -968,7 +1138,7 @@ body {
 <div class="screen" id="screen-home">
   <div class="app-bar">
     <div class="app-bar-logo">Journ<span>i</span></div>
-    <div id="avatarWrap" onclick="toggleMenu()"></div>
+    <div id="avatarWrap"></div>
   </div>
   <div class="home-scroll">
     <div class="home-greeting">
@@ -1326,15 +1496,26 @@ window.submitAuth=async()=>{
   }
 };
 
+// ── SESSION PERSISTENCE ──
+// belt-and-suspenders: אם INITIAL_SESSION לא הביא session, ננסה getSession ישירות
+setTimeout(async()=>{
+  if(!CU){
+    const{data:{session}}=await sb.auth.getSession();
+    if(session?.user)await handleSignIn(session.user);
+  }
+},800);
+
 // מטפל בכניסה — נקרא מ-onAuthStateChange
 async function handleSignIn(user){
+  if(CU?.id===user.id)return; // מניעת ריצה כפולה
   CU=user;
   const displayName=CU.user_metadata?.full_name||CU.user_metadata?.name||CU.email.split('@')[0];
-  await sb.from('users').upsert({
+  const{error:upsertErr}=await sb.from('users').upsert({
     id:CU.id,email:CU.email,name:displayName,
     photo_url:CU.user_metadata?.avatar_url||CU.user_metadata?.picture||'',
     last_seen:new Date().toISOString()
   },{onConflict:'id'});
+  if(upsertErr)console.warn('users upsert:',upsertErr.message);
   CU._name=displayName;
   setupHome();
   const p=new URLSearchParams(window.location.search);
@@ -1371,20 +1552,108 @@ sb.auth.onAuthStateChange(async(event,session)=>{
 function setupHome(){
   document.getElementById('greetName').textContent=(CU._name||'חבר').split(' ')[0];
   buildAvatar();
-  document.getElementById('pmName').textContent=CU._name||'';
-  document.getElementById('pmEmail').textContent=CU.email||'';
   loadTrips();
 }
 function buildAvatar(){
   const el=document.getElementById('avatarWrap');
   const photo=CU?.user_metadata?.avatar_url||CU?.user_metadata?.picture||'';
   if(photo){
-    el.innerHTML=`<div class="avatar-btn" onclick="toggleMenu()"><img src="${photo}"></div>`;
+    el.innerHTML=`<div class="avatar-btn" onclick="goProfile()"><img src="${photo}"></div>`;
   }else{
     const i=(CU._name||'U').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-    el.innerHTML=`<div class="avatar-btn" onclick="toggleMenu()">${i}</div>`;
+    el.innerHTML=`<div class="avatar-btn" onclick="goProfile()">${i}</div>`;
   }
 }
+
+// ── PROFILE ──
+window.goProfile=()=>{
+  const photo=CU?.user_metadata?.avatar_url||CU?.user_metadata?.picture||'';
+  const avEl=document.getElementById('profileAvLg');
+  if(photo){avEl.innerHTML=`<img src="${photo}">`;}
+  else{avEl.textContent=(CU._name||'U').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();}
+  document.getElementById('profileHeroName').textContent=CU._name||'—';
+  document.getElementById('profileHeroEmail').textContent=CU.email||'—';
+  document.getElementById('profileNameSub').textContent=CU._name||'—';
+  const provider=CU.app_metadata?.provider||CU.app_metadata?.providers?.[0]||'email';
+  const providerLabels={google:'🔵 Google',email:'📧 אימייל',github:'GitHub'};
+  document.getElementById('profileProvider').textContent=providerLabels[provider]||provider;
+  // מסתיר "שנה סיסמה" עבור משתמשי Google
+  document.getElementById('securitySection').style.display=provider==='google'?'none':'';
+  showScreen('profile');
+};
+
+window.openEditName=()=>{
+  document.getElementById('editNameInput').value=CU._name||'';
+  document.getElementById('olEditName').classList.add('show');
+};
+
+window.saveProfileName=async()=>{
+  const name=document.getElementById('editNameInput').value.trim();
+  if(!name){showToast('אנא הכנס שם');return;}
+  try{
+    const[{error:e1},{error:e2}]=await Promise.all([
+      sb.auth.updateUser({data:{full_name:name}}),
+      sb.from('users').update({name}).eq('id',CU.id)
+    ]);
+    if(e1||e2)throw e1||e2;
+    CU._name=name;
+    document.getElementById('profileHeroName').textContent=name;
+    document.getElementById('profileNameSub').textContent=name;
+    document.getElementById('greetName').textContent=name.split(' ')[0];
+    buildAvatar();
+    closeOlDirect('olEditName');
+    showToast('✓ שם עודכן');
+  }catch(e){showToast('שגיאה: '+e.message);}
+};
+
+window.openChangePassword=()=>{
+  ['cpCurrent','cpNew','cpConfirm'].forEach(x=>document.getElementById(x).value='');
+  document.getElementById('cpError').textContent='';
+  document.getElementById('olChangePassword').classList.add('show');
+};
+
+window.savePassword=async()=>{
+  const current=document.getElementById('cpCurrent').value;
+  const newPass=document.getElementById('cpNew').value;
+  const confirm=document.getElementById('cpConfirm').value;
+  const errEl=document.getElementById('cpError');
+  errEl.textContent='';
+  if(!current){errEl.textContent='הכנס את הסיסמה הנוכחית';return;}
+  if(newPass.length<6){errEl.textContent='הסיסמה החדשה חייבת להיות לפחות 6 תווים';return;}
+  if(newPass!==confirm){errEl.textContent='הסיסמאות אינן תואמות';return;}
+  const btn=document.getElementById('cpSaveBtn');
+  btn.textContent='שומר...';btn.disabled=true;
+  try{
+    // אימות מחדש עם הסיסמה הנוכחית
+    const{error:reErr}=await sb.auth.signInWithPassword({email:CU.email,password:current});
+    if(reErr)throw new Error('הסיסמה הנוכחית שגויה');
+    const{error}=await sb.auth.updateUser({password:newPass});
+    if(error)throw error;
+    closeOlDirect('olChangePassword');
+    showToast('✓ הסיסמה עודכנה');
+  }catch(e){
+    errEl.textContent=e.message;
+  }finally{
+    btn.textContent='עדכן סיסמה ←';btn.disabled=false;
+  }
+};
+
+window.confirmDeleteAccount=async()=>{
+  if(!confirm('האם אתה בטוח שברצונך למחוק את החשבון?\n\nפעולה זו תמחק את כל הטיולים, האירועים והנתונים שלך לצמיתות.'))return;
+  if(!confirm('אישור אחרון — פעולה זו אינה הפיכה. למחוק?'))return;
+  try{
+    showToast('מוחק נתונים...');
+    // מחיקת כל הטיולים שבבעלות המשתמש (cascade למחוק events + days + collaborators)
+    await sb.from('trips').delete().eq('owner_id',CU.id);
+    // מחיקת הפרופיל
+    await sb.from('users').delete().eq('id',CU.id);
+    // ניתוק
+    await sb.auth.signOut();
+    CU=null;
+    showScreen('landing');
+    showToast('החשבון נמחק');
+  }catch(e){showToast('שגיאה: '+e.message);}
+};
 async function loadTrips(){
   const{data:cols}=await sb.from('trip_collaborators').select('trip_id').eq('user_id',CU.id);
   if(!cols?.length){
@@ -1451,12 +1720,15 @@ window.createTrip=async()=>{
 // ── OPEN TRIP ──
 async function openTrip(id){
   CTripId=id;CDayIdx=0;
-  const[{data:trip},{data:days},{data:events},{data:collabs}]=await Promise.all([
+  const[tripRes,daysRes,eventsRes,collabsRes]=await Promise.all([
     sb.from('trips').select('*').eq('id',id).single(),
     sb.from('trip_days').select('*').eq('trip_id',id).order('day_index'),
     sb.from('events').select('*').eq('trip_id',id).order('sort_order').order('time'),
     sb.from('trip_collaborators').select('*,users(name,photo_url,email)').eq('trip_id',id)
   ]);
+  if(daysRes.error)console.error('trip_days load error:',daysRes.error.message);
+  if(eventsRes.error)console.error('events load error:',eventsRes.error.message);
+  const trip=tripRes.data,days=daysRes.data,events=eventsRes.data,collabs=collabsRes.data;
   if(!trip){showToast('טיול לא נמצא');return;}
   CTrip={...trip,days:days||[],events:events||[],collaborators:collabs||[]};
   if(!CTrip.collaborators.some(c=>c.user_id===CU.id)){
@@ -1736,14 +2008,8 @@ function showTabFn(n,btn){
 }
 window.showTab=showTabFn;
 
-function toggleMenu(){document.getElementById('profileMenu').classList.toggle('show');}
-window.toggleMenu=toggleMenu;
-function closeMenus(){document.getElementById('profileMenu').classList.remove('show');}
+function closeMenus(){} // kept for compatibility
 window.closeMenus=closeMenus;
-document.addEventListener('click',e=>{
-  const m=document.getElementById('profileMenu');
-  if(m.classList.contains('show')&&!m.contains(e.target)&&!e.target.closest('#avatarWrap'))m.classList.remove('show');
-});
 
 function closeOl(e,id){if(e.target.id===id)closeOlDirect(id);}
 window.closeOl=closeOl;
