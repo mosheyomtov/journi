@@ -994,7 +994,7 @@ body {
 .settings-row-sub { font-size:12px; color:var(--ink-3); margin-top:2px; }
 .settings-chevron { color:var(--ink-4); font-size:20px; }
 </style>
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB63LFtOFf_65UkNG1vMTZ3NKLaEqSNhc4&libraries=places&language=en&callback=initGooglePlaces" async defer></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB63LFtOFf_65UkNG1vMTZ3NKLaEqSNhc4&libraries=places&language=en&loading=async&callback=initGooglePlaces" async defer></script>
 </head>
 <body>
 
@@ -1902,7 +1902,7 @@ window.openAddEvent=(dayIndex)=>{
   ['evTime','evEmoji','evName','evDesc','evWarn','evTip'].forEach(x=>document.getElementById(x).value='');
   document.getElementById('evTag').value='sight';
   clearPlaceSelection();
-  _gAutocomplete=null; _gMap=null; _gMarker=null;
+  _gMap=null; _gMarker=null;
   ensureGooglePlaces();
   document.getElementById('olEvent').classList.add('show');
 };
@@ -1919,7 +1919,7 @@ window.openEditEvent=(eventId)=>{
   document.getElementById('evTip').value=ev.tip_text||ev.tip||'';
   document.getElementById('evTag').value=ev.category||ev.tag||'sight';
   clearPlaceSelection();
-  _gAutocomplete=null; _gMap=null; _gMarker=null;
+  _gMap=null; _gMarker=null;
   if(ev.lat&&ev.lng){
     const lat=parseFloat(ev.lat), lng=parseFloat(ev.lng);
     const name=ev.place_name_en||ev.place_name_ko||'';
@@ -2000,51 +2000,58 @@ let _gAutocomplete=null;
 let _gMap=null;
 let _gMarker=null;
 
-window.initGooglePlaces=function(){
+function _attachAutocomplete(){
   const input=document.getElementById('evPlaceSearch');
   if(!input||!window.google?.maps?.places)return;
+  // Detach old instance if any
+  if(_gAutocomplete){
+    google.maps.event.clearInstanceListeners(_gAutocomplete);
+    _gAutocomplete=null;
+  }
   _gAutocomplete=new google.maps.places.Autocomplete(input,{
-    language:'en',
     fields:['name','formatted_address','geometry','place_id']
   });
   _gAutocomplete.addListener('place_changed',()=>{
     const place=_gAutocomplete.getPlace();
-    if(!place.geometry){return;}
+    if(!place.geometry)return;
     const lat=place.geometry.location.lat();
     const lng=place.geometry.location.lng();
     const name=place.name||'';
     const addr=place.formatted_address||'';
-    // Store in hidden fields
     document.getElementById('evLat').value=lat;
     document.getElementById('evLng').value=lng;
     document.getElementById('evPlaceNameEn').value=name;
-    document.getElementById('evPlaceNameKo').value=name; // no Korean source; keep consistent
-    document.getElementById('evKakaoId').value='';        // reserved for future use
-    // Update chip UI
+    document.getElementById('evPlaceNameKo').value=name;
+    document.getElementById('evKakaoId').value='';
     document.getElementById('psName').textContent=name;
     document.getElementById('psAddr').textContent=addr;
     document.getElementById('psCoords').textContent=`${lat.toFixed(5)}, ${lng.toFixed(5)}`;
     document.getElementById('placeSelected').style.display='flex';
-    // Render mini map
     const mapDiv=document.getElementById('evMapPreview');
     mapDiv.style.display='block';
     if(!_gMap){
       _gMap=new google.maps.Map(mapDiv,{
         center:{lat,lng},zoom:15,
-        disableDefaultUI:true,zoomControl:true,
-        mapTypeControl:false,streetViewControl:false
+        disableDefaultUI:true,zoomControl:true
       });
       _gMarker=new google.maps.Marker({position:{lat,lng},map:_gMap});
     }else{
       const pos={lat,lng};
-      _gMap.setCenter(pos);
-      _gMap.setZoom(15);
-      _gMarker.setPosition(pos);
+      _gMap.setCenter(pos);_gMap.setZoom(15);_gMarker.setPosition(pos);
     }
-    // Trigger resize after the div becomes visible
-    setTimeout(()=>google.maps.event.trigger(_gMap,'resize'),50);
+    setTimeout(()=>google.maps.event.trigger(_gMap,'resize'),60);
   });
-};
+}
+
+// Called by openAddEvent / openEditEvent — works whether SDK loaded yet or not
+function ensureGooglePlaces(){
+  if(window._googlePlacesReady){
+    _attachAutocomplete();
+  }else{
+    // SDK not ready yet — queue the attach; initGooglePlaces will fire it
+    window._googlePlacesInitCb=_attachAutocomplete;
+  }
+}
 
 window.clearPlaceSelection=function(){
   ['evLat','evLng','evKakaoId','evPlaceNameKo','evPlaceNameEn'].forEach(id=>document.getElementById(id).value='');
@@ -2052,11 +2059,6 @@ window.clearPlaceSelection=function(){
   document.getElementById('evMapPreview').style.display='none';
   document.getElementById('evPlaceSearch').value='';
 };
-
-// Re-init autocomplete whenever the event sheet opens (input may have been recreated)
-function ensureGooglePlaces(){
-  if(window.google?.maps?.places&&!_gAutocomplete)window.initGooglePlaces();
-}
 
 window.openGoogleMapsLink=function(lat,lng,name){
   const q=name?encodeURIComponent(name):`${lat},${lng}`;
@@ -2150,6 +2152,14 @@ function esc(s){return String(s).replace(/'/g,"\\'").replace(/"/g,'&quot;');}
 </script>
 
 <script>
+// ── Google Places bootstrap (must be global, called by Maps SDK before module loads) ──
+window._googlePlacesReady=false;
+window._googlePlacesInitCb=null;
+window.initGooglePlaces=function(){
+  window._googlePlacesReady=true;
+  if(typeof window._googlePlacesInitCb==='function')window._googlePlacesInitCb();
+};
+
 // ── UI helpers ──
 function showScreen(n){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
