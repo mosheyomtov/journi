@@ -231,8 +231,27 @@ body {
 }
 .gmaps-btn:active { transform:scale(0.96); }
 
-/* pac-container (Google Places dropdown) z-index fix */
-.pac-container { z-index:9999 !important; }
+/* pac-container — hide the native widget; we use our own dropdown */
+.pac-container { display:none !important; }
+
+/* Custom Places dropdown */
+#placeDropdown {
+  background:#fff;
+  border:1.5px solid var(--border-2);
+  border-radius:var(--r-sm);
+  box-shadow:var(--sh-lg);
+  max-height:220px; overflow-y:auto;
+  margin-top:4px;
+}
+.place-result-item {
+  padding:11px 14px; cursor:pointer;
+  border-bottom:1px solid var(--border);
+  transition:background .12s;
+}
+.place-result-item:last-child { border-bottom:none; }
+.place-result-item:active { background:var(--brand-light); }
+.pri-main { font-size:14px; font-weight:600; color:var(--ink); margin-bottom:2px; }
+.pri-sec  { font-size:11px; color:var(--ink-3); }
 
 /* ═══════════════════════════════
    APP SHELL (sticky header)
@@ -1403,7 +1422,8 @@ body {
     <textarea class="field-textarea" id="evDesc" placeholder="תיאור מפורט..." style="margin-bottom:12px"></textarea>
     <label class="field-label">חיפוש מקום</label>
     <div class="place-wrap" style="margin-bottom:12px">
-      <input class="field-input" id="evPlaceSearch" placeholder="Search for a place in Korea..." autocomplete="off" style="margin-bottom:0">
+      <input class="field-input" id="evPlaceSearch" placeholder="Search for a place in Korea..." autocomplete="off" oninput="onPlaceInput()" style="margin-bottom:0">
+      <div id="placeDropdown" style="display:none"></div>
       <div class="place-selected" id="placeSelected" style="display:none">
         <div class="place-info">
           <span class="ps-name" id="psName"></span>
@@ -1994,25 +2014,29 @@ window.delEvById=async(evId)=>{
   showToast('✓ נמחק');renderSchedule();
 };
 
-// ── GOOGLE PLACES — DYNAMIC LAZY LOADER ──
-// Script is injected on first form open (avoids loading=async warning, no race condition)
-let _gAutocomplete=null;
+// ── GOOGLE PLACES — AutocompleteService (no pac-container, no positioning bugs) ──
+let _gAutoSvc=null;
+let _gDetailsSvc=null;
+let _gSessionToken=null;
 let _gMap=null;
 let _gMarker=null;
 let _mapsLoading=false;
+let _placeTimer=null;
 
-// Called by Google Maps SDK once fully loaded (set as callback= in script URL)
+// Called by Google SDK after full load
 window.initGooglePlaces=function(){
-  if(typeof window._gPlacesCb==='function'){
-    window._gPlacesCb();
-    window._gPlacesCb=null;
-  }
+  _gAutoSvc=new google.maps.places.AutocompleteService();
+  _gDetailsSvc=new google.maps.places.PlacesService(document.createElement('div'));
+  _newSession();
+  if(typeof window._gPlacesCb==='function'){window._gPlacesCb();window._gPlacesCb=null;}
 };
 
+function _newSession(){
+  _gSessionToken=new google.maps.places.AutocompleteSessionToken();
+}
+
 function loadGoogleMaps(cb){
-  // Already loaded
   if(window.google?.maps?.places){cb();return;}
-  // Queuing — SDK currently downloading
   window._gPlacesCb=cb;
   if(_mapsLoading)return;
   _mapsLoading=true;
@@ -2021,57 +2045,86 @@ function loadGoogleMaps(cb){
       +'?key=AIzaSyB63LFtOFf_65UkNG1vMTZ3NKLaEqSNhc4'
       +'&libraries=places&language=en&callback=initGooglePlaces';
   s.async=true;
-  s.onerror=()=>{
-    _mapsLoading=false;
-    showToast('שגיאה: לא הצלחנו לטעון את Google Maps');
-  };
+  s.onerror=()=>{_mapsLoading=false;showToast('שגיאה: לא הצלחנו לטעון את Google Maps');};
   document.head.appendChild(s);
 }
 
-function _attachAutocomplete(){
-  const input=document.getElementById('evPlaceSearch');
-  if(!input||!window.google?.maps?.places)return;
-  // Remove previous instance from this input element
-  if(_gAutocomplete){
-    google.maps.event.clearInstanceListeners(_gAutocomplete);
-    _gAutocomplete=null;
+// Called by oninput on the search field
+window.onPlaceInput=function(){
+  const q=document.getElementById('evPlaceSearch').value.trim();
+  const dd=document.getElementById('placeDropdown');
+  clearTimeout(_placeTimer);
+  if(!q){dd.style.display='none';return;}
+  // Show loading indicator
+  dd.innerHTML='<div class="place-result-item"><div class="pri-sec">מחפש...</div></div>';
+  dd.style.display='block';
+  _placeTimer=setTimeout(()=>_doSearch(q),300);
+};
+
+function _doSearch(q){
+  if(!_gAutoSvc){
+    // SDK not ready yet — load it first then retry
+    loadGoogleMaps(()=>_doSearch(q));
+    return;
   }
-  _gAutocomplete=new google.maps.places.Autocomplete(input,{
-    fields:['name','formatted_address','geometry','place_id'],
-    componentRestrictions:{country:'kr'}
-  });
-  _gAutocomplete.addListener('place_changed',()=>{
-    const place=_gAutocomplete.getPlace();
-    if(!place?.geometry?.location)return;
-    const lat=place.geometry.location.lat();
-    const lng=place.geometry.location.lng();
-    const name=place.name||'';
-    const addr=place.formatted_address||'';
-    document.getElementById('evLat').value=lat;
-    document.getElementById('evLng').value=lng;
-    document.getElementById('evPlaceNameEn').value=name;
-    document.getElementById('evPlaceNameKo').value=name;
-    document.getElementById('evKakaoId').value='';
-    document.getElementById('psName').textContent=name;
-    document.getElementById('psAddr').textContent=addr;
-    document.getElementById('psCoords').textContent=`${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-    document.getElementById('placeSelected').style.display='flex';
-    // Mini map preview
-    const mapDiv=document.getElementById('evMapPreview');
-    mapDiv.style.display='block';
-    const pos={lat,lng};
-    if(!_gMap){
-      _gMap=new google.maps.Map(mapDiv,{center:pos,zoom:15,disableDefaultUI:true,zoomControl:true});
-      _gMarker=new google.maps.Marker({position:pos,map:_gMap});
-    }else{
-      _gMap.setCenter(pos);_gMap.setZoom(15);_gMarker.setPosition(pos);
+  _gAutoSvc.getPlacePredictions(
+    {input:q,sessionToken:_gSessionToken,componentRestrictions:{country:'kr'}},
+    (predictions,status)=>{
+      const dd=document.getElementById('placeDropdown');
+      if(status!==google.maps.places.PlacesServiceStatus.OK||!predictions?.length){
+        dd.innerHTML='<div class="place-result-item"><div class="pri-sec">לא נמצאו תוצאות</div></div>';
+        return;
+      }
+      dd.innerHTML=predictions.map(p=>`
+        <div class="place-result-item" onclick="selectPrediction('${p.place_id}','${p.structured_formatting?.main_text?.replace(/'/g,"\\'")||''}','${p.description?.replace(/'/g,"\\'")||''}')">
+          <div class="pri-main">${p.structured_formatting?.main_text||p.description}</div>
+          <div class="pri-sec">${p.structured_formatting?.secondary_text||''}</div>
+        </div>`).join('');
+      dd.style.display='block';
     }
-    setTimeout(()=>google.maps.event.trigger(_gMap,'resize'),80);
-  });
+  );
 }
 
+window.selectPrediction=function(placeId,mainText,fullDesc){
+  document.getElementById('placeDropdown').style.display='none';
+  document.getElementById('evPlaceSearch').value=mainText||fullDesc;
+  if(!_gDetailsSvc){return;}
+  _gDetailsSvc.getDetails(
+    {placeId,fields:['name','formatted_address','geometry'],sessionToken:_gSessionToken},
+    (place,status)=>{
+      _newSession(); // start fresh session after getDetails
+      if(status!==google.maps.places.PlacesServiceStatus.OK||!place?.geometry?.location)return;
+      const lat=place.geometry.location.lat();
+      const lng=place.geometry.location.lng();
+      const name=place.name||mainText||'';
+      const addr=place.formatted_address||fullDesc||'';
+      document.getElementById('evLat').value=lat;
+      document.getElementById('evLng').value=lng;
+      document.getElementById('evPlaceNameEn').value=name;
+      document.getElementById('evPlaceNameKo').value=name;
+      document.getElementById('evKakaoId').value='';
+      document.getElementById('psName').textContent=name;
+      document.getElementById('psAddr').textContent=addr;
+      document.getElementById('psCoords').textContent=`${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      document.getElementById('placeSelected').style.display='flex';
+      // Mini map
+      const mapDiv=document.getElementById('evMapPreview');
+      mapDiv.style.display='block';
+      const pos={lat,lng};
+      if(!_gMap){
+        _gMap=new google.maps.Map(mapDiv,{center:pos,zoom:15,disableDefaultUI:true,zoomControl:true});
+        _gMarker=new google.maps.Marker({position:pos,map:_gMap});
+      }else{
+        _gMap.setCenter(pos);_gMap.setZoom(15);_gMarker.setPosition(pos);
+      }
+      setTimeout(()=>google.maps.event.trigger(_gMap,'resize'),80);
+    }
+  );
+};
+
 function ensureGooglePlaces(){
-  loadGoogleMaps(_attachAutocomplete);
+  // Pre-load SDK on form open so first keystroke is instant
+  loadGoogleMaps(()=>{});
 }
 
 window.clearPlaceSelection=function(){
@@ -2079,6 +2132,7 @@ window.clearPlaceSelection=function(){
   document.getElementById('placeSelected').style.display='none';
   document.getElementById('evMapPreview').style.display='none';
   document.getElementById('evPlaceSearch').value='';
+  document.getElementById('placeDropdown').style.display='none';
 };
 
 window.openGoogleMapsLink=function(lat,lng,name){
