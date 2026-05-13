@@ -193,6 +193,95 @@ body {
 .auth-link { color:var(--brand); cursor:pointer; font-weight:600; }
 
 /* ═══════════════════════════════
+   KAKAO SEARCH AUTOCOMPLETE
+═══════════════════════════════ */
+.kakao-wrap { position:relative; }
+
+.kakao-input-row { position:relative; }
+.kakao-input-row .field-input { padding-left:40px; }
+.kakao-input-icon {
+  position:absolute; left:14px; top:50%; transform:translateY(-50%);
+  font-size:16px; pointer-events:none;
+}
+
+.kakao-dropdown {
+  position:absolute; top:calc(100% + 4px); left:0; right:0;
+  background:#fff; border:1.5px solid var(--border-2);
+  border-radius:var(--r-sm); z-index:200;
+  box-shadow:var(--sh-lg); max-height:240px; overflow-y:auto;
+}
+.kakao-result-item {
+  padding:11px 14px; cursor:pointer;
+  border-bottom:1px solid var(--border);
+  transition:background .12s;
+}
+.kakao-result-item:last-child { border-bottom:none; }
+.kakao-result-item:hover { background:var(--brand-light); }
+.kri-name { font-size:14px; font-weight:700; color:var(--ink); margin-bottom:2px; }
+.kri-addr { font-size:11px; color:var(--ink-3); margin-bottom:1px; }
+.kri-cat {
+  font-size:10px; color:var(--brand); font-weight:600;
+  background:var(--brand-light); border-radius:4px;
+  padding:1px 6px; display:inline-block; margin-top:3px;
+}
+.kakao-no-result { padding:14px; text-align:center; color:var(--ink-3); font-size:13px; }
+.kakao-searching { padding:14px; text-align:center; color:var(--ink-3); font-size:13px; }
+
+.kakao-selected {
+  margin-top:8px; background:var(--brand-light);
+  border:1.5px solid rgba(59,110,245,0.25);
+  border-radius:var(--r-sm); padding:10px 12px;
+  display:flex; align-items:center; gap:10px;
+}
+.ks-place-info { flex:1; min-width:0; }
+.ks-name-ko { font-size:14px; font-weight:700; color:var(--ink); display:block; }
+.ks-name-en { font-size:11px; color:var(--ink-3); display:block; margin-top:2px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ks-coords { font-size:10px; color:var(--ink-4); display:block; margin-top:2px; font-family:monospace; }
+.ks-clear {
+  background:none; border:none; cursor:pointer;
+  color:var(--ink-3); font-size:16px; flex-shrink:0;
+  width:24px; height:24px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  transition:all .15s;
+}
+.ks-clear:hover { background:rgba(59,110,245,0.12); color:var(--brand); }
+
+/* ═══════════════════════════════
+   TRANSPORT MODE SELECTOR
+═══════════════════════════════ */
+.transport-grid {
+  display:grid; grid-template-columns:1fr 1fr; gap:8px;
+}
+.transport-option input[type="radio"] { display:none; }
+.transport-pill {
+  border:1.5px solid var(--border);
+  border-radius:var(--r-sm); padding:11px 8px;
+  text-align:center; font-size:13px; font-weight:600;
+  color:var(--ink-2); background:#fff; cursor:pointer;
+  transition:all .15s var(--ease-spring);
+  user-select:none;
+}
+.transport-option input:checked + .transport-pill {
+  border-color:var(--brand); background:var(--brand-light);
+  color:var(--brand); box-shadow:0 0 0 3px rgba(59,110,245,0.12);
+  transform:scale(1.03);
+}
+.transport-pill:hover { border-color:var(--border-2); background:var(--surface-2); }
+
+/* Kakao Map button */
+.kakao-map-btn {
+  display:inline-flex; align-items:center; gap:6px;
+  background:#FFCD00; color:#3C1E1E;
+  padding:9px 14px; border-radius:10px;
+  font-size:12.5px; font-weight:800;
+  border:none; cursor:pointer; margin-top:10px;
+  transition:all .15s; font-family:'Inter',sans-serif;
+  box-shadow:0 3px 10px rgba(255,205,0,0.35);
+}
+.kakao-map-btn:active { transform:scale(0.96); }
+
+/* ═══════════════════════════════
    APP SHELL (sticky header)
 ═══════════════════════════════ */
 .app-bar {
@@ -1359,10 +1448,45 @@ body {
     <input class="field-input" id="evName" placeholder="שם המקום" style="margin-bottom:12px">
     <label class="field-label">תיאור</label>
     <textarea class="field-textarea" id="evDesc" placeholder="תיאור מפורט..." style="margin-bottom:12px"></textarea>
-    <label class="field-label">כתובת / שם למפה</label>
-    <input class="field-input" id="evAddr" placeholder="לדוגמה: Myeongdong Seoul" style="margin-bottom:12px">
+    <label class="field-label">חיפוש מקום (Kakao)</label>
+    <div class="kakao-wrap" style="margin-bottom:12px">
+      <div class="kakao-input-row">
+        <input class="field-input" id="evKakaoSearch" placeholder="חפש מקום בקוריאה..." autocomplete="off" oninput="onKakaoInput()" style="margin-bottom:0">
+        <button type="button" class="kakao-map-btn" id="evMapBtn" onclick="openKakaoMap()" style="display:none">🗺️ מפה</button>
+      </div>
+      <div class="kakao-dropdown" id="kakaoDropdown" style="display:none"></div>
+      <div class="kakao-selected" id="kakaoSelected" style="display:none">
+        <span class="ks-name-ko" id="ksNameKo"></span>
+        <span class="ks-name-en" id="ksNameEn"></span>
+        <span class="ks-coords" id="ksCoords"></span>
+        <button type="button" class="ks-clear" onclick="clearKakaoPlace()">✕</button>
+      </div>
+      <!-- Hidden fields -->
+      <input type="hidden" id="evLat">
+      <input type="hidden" id="evLng">
+      <input type="hidden" id="evKakaoId">
+      <input type="hidden" id="evPlaceNameKo">
+      <input type="hidden" id="evPlaceNameEn">
+    </div>
     <label class="field-label">איך מגיעים</label>
-    <textarea class="field-textarea" id="evHow" placeholder="מטרו / מונית / הליכה..." style="margin-bottom:12px"></textarea>
+    <div class="transport-grid" style="margin-bottom:12px">
+      <label class="transport-option">
+        <input type="radio" name="transportMode" value="walk">
+        <span class="transport-pill">🚶 הליכה</span>
+      </label>
+      <label class="transport-option">
+        <input type="radio" name="transportMode" value="transit">
+        <span class="transport-pill">🚇 תחבורה ציבורית</span>
+      </label>
+      <label class="transport-option">
+        <input type="radio" name="transportMode" value="car">
+        <span class="transport-pill">🚗 רכב פרטי</span>
+      </label>
+      <label class="transport-option">
+        <input type="radio" name="transportMode" value="taxi">
+        <span class="transport-pill">🚕 מונית</span>
+      </label>
+    </div>
     <label class="field-label">אזהרה</label>
     <input class="field-input" id="evWarn" placeholder="⚠️ סגור שלישי..." style="margin-bottom:12px">
     <label class="field-label">טיפ</label>
@@ -1796,30 +1920,43 @@ function renderSchedule(){
     body.innerHTML=`<div class="empty-state" style="border:1.5px dashed var(--border-2)"><div class="empty-icon">📅</div><div class="empty-title">אין אירועים ביום הזה</div><div class="empty-desc">לחץ + כדי להוסיף</div></div>`;
     return;
   }
-  body.innerHTML=dayEvs.map((ev,i)=>`
-    <div class="tl-item" style="animation-delay:${i*.04}s">
+  const TRANSPORT_LABELS={walk:'🚶 הליכה',transit:'🚇 תחבורה ציבורית',car:'🚗 רכב פרטי',taxi:'🚕 מונית'};
+  body.innerHTML=dayEvs.map((ev,i)=>{
+    const evTitle=ev.title||ev.name||'—';
+    const evTime=ev.event_time||ev.time||'--:--';
+    const evCat=ev.category||ev.tag||'sight';
+    const evWarn=ev.warning_text||ev.warning||'';
+    const evTip=ev.tip_text||ev.tip||'';
+    const evTransport=ev.transport_mode||ev.how||'';
+    const evKakaoId=ev.kakao_place_id||'';
+    const evLat=ev.lat||'';const evLng=ev.lng||'';
+    const mapBtn=evKakaoId
+      ?`<button class="kakao-map-btn" style="margin-top:8px" onclick="event.stopPropagation();openKakaoMap_ev('${evKakaoId}','${evLat}','${evLng}')">🗺️ פתח ב-Kakao Maps</button>`
+      :'';
+    return`<div class="tl-item" style="animation-delay:${i*.04}s">
       <div class="tl-dot"></div>
       <div class="tl-card" onclick="toggleEv(this)">
         <div class="tl-top">
-          <span class="tl-time">${ev.time||'--:--'}</span>
+          <span class="tl-time">${evTime}</span>
           <span class="tl-emoji">${ev.emoji||'📍'}</span>
-          <span class="tl-name">${ev.name||'—'}</span>
+          <span class="tl-name">${evTitle}</span>
           <span class="tl-chevron">›</span>
         </div>
-        <div class="tl-tags"><span class="pill ${TAGS[ev.tag]?.p||'pill-sight'}">${TAGS[ev.tag]?.l||'📍 אטרקציה'}</span></div>
+        <div class="tl-tags"><span class="pill ${TAGS[evCat]?.p||'pill-sight'}">${TAGS[evCat]?.l||'📍 אטרקציה'}</span></div>
         <div class="tl-body">
           ${ev.description?`<div class="tl-desc">${ev.description}</div>`:''}
-          ${ev.how?`<div class="info-block ib-nav"><div class="info-lbl">🚇 איך מגיעים</div><div class="info-text">${ev.how}</div></div>`:''}
-          ${ev.warning?`<div class="info-block ib-warn"><div class="info-lbl">⚠️ אזהרה</div><div class="info-text">${ev.warning}</div></div>`:''}
-          ${ev.tip?`<div class="info-block ib-tip"><div class="info-lbl">💡 טיפ</div><div class="info-text">${ev.tip}</div></div>`:''}
-          ${ev.address?`<button class="naver-btn" onclick="event.stopPropagation();naverMap('${esc(ev.address)}')">📍 פתח ב-Naver Map</button>`:''}
+          ${evTransport?`<div class="info-block ib-nav"><div class="info-lbl">🚗 איך מגיעים</div><div class="info-text">${TRANSPORT_LABELS[evTransport]||evTransport}</div></div>`:''}
+          ${evWarn?`<div class="info-block ib-warn"><div class="info-lbl">⚠️ אזהרה</div><div class="info-text">${evWarn}</div></div>`:''}
+          ${evTip?`<div class="info-block ib-tip"><div class="info-lbl">💡 טיפ</div><div class="info-text">${evTip}</div></div>`:''}
+          ${mapBtn}
           <div class="event-acts">
             <button class="ev-act edit" onclick="event.stopPropagation();openEditEvent('${ev.id}')">✏️ ערוך</button>
             <button class="ev-act del" onclick="event.stopPropagation();delEvById('${ev.id}')">🗑️ מחק</button>
           </div>
         </div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 window.toggleEv=el=>{el.classList.toggle('open');el.querySelector('.tl-body').classList.toggle('show');};
 
@@ -1828,8 +1965,10 @@ window.openAddEvent=(dayIndex)=>{
   EvCtx={dayIndex,eventId:null};
   document.getElementById('evSheetTitle').textContent='הוסף אירוע';
   document.getElementById('evDelBtn').style.display='none';
-  ['evTime','evEmoji','evName','evDesc','evAddr','evHow','evWarn','evTip'].forEach(x=>document.getElementById(x).value='');
+  ['evTime','evEmoji','evName','evDesc','evWarn','evTip'].forEach(x=>document.getElementById(x).value='');
   document.getElementById('evTag').value='sight';
+  clearKakaoPlace();
+  document.querySelectorAll('input[name="transportMode"]').forEach(r=>r.checked=false);
   document.getElementById('olEvent').classList.add('show');
 };
 window.openEditEvent=(eventId)=>{
@@ -1837,30 +1976,46 @@ window.openEditEvent=(eventId)=>{
   EvCtx={dayIndex:CDayIdx,eventId};
   document.getElementById('evSheetTitle').textContent='ערוך אירוע';
   document.getElementById('evDelBtn').style.display='';
-  document.getElementById('evTime').value=ev.time||'';
-  document.getElementById('evEmoji').value=ev.emoji||'';
-  document.getElementById('evName').value=ev.name||'';
+  document.getElementById('evTime').value=ev.event_time||ev.time||'';
+  document.getElementById('evEmoji').value=ev.emoji||'📍';
+  document.getElementById('evName').value=ev.title||ev.name||'';
   document.getElementById('evDesc').value=ev.description||'';
-  document.getElementById('evAddr').value=ev.address||'';
-  document.getElementById('evHow').value=ev.how||'';
-  document.getElementById('evWarn').value=ev.warning||'';
-  document.getElementById('evTip').value=ev.tip||'';
-  document.getElementById('evTag').value=ev.tag||'sight';
+  document.getElementById('evWarn').value=ev.warning_text||ev.warning||'';
+  document.getElementById('evTip').value=ev.tip_text||ev.tip||'';
+  document.getElementById('evTag').value=ev.category||ev.tag||'sight';
+  // Kakao place
+  clearKakaoPlace();
+  if(ev.lat&&ev.lng){
+    selectKakaoPlace({
+      id:ev.kakao_place_id||'',
+      place_name:ev.place_name_ko||ev.address||'',
+      place_name_en:ev.place_name_en||'',
+      x:ev.lng,y:ev.lat
+    },true);
+  }
+  // Transport mode
+  const tm=ev.transport_mode||ev.how||'';
+  document.querySelectorAll('input[name="transportMode"]').forEach(r=>{r.checked=r.value===tm;});
   document.getElementById('olEvent').classList.add('show');
 };
 window.saveEvent=async()=>{
   if(!EvCtx)return;
   const btn=document.getElementById('evSheetTitle');
+  const _tm=document.querySelector('input[name="transportMode"]:checked');
   const evData={
-    time:document.getElementById('evTime').value||'00:00',
+    event_time:document.getElementById('evTime').value||'00:00',
     emoji:document.getElementById('evEmoji').value||'📍',
-    name:document.getElementById('evName').value||'אירוע',
+    title:document.getElementById('evName').value||'אירוע',
     description:document.getElementById('evDesc').value,
-    address:document.getElementById('evAddr').value,
-    how:document.getElementById('evHow').value,
-    warning:document.getElementById('evWarn').value,
-    tip:document.getElementById('evTip').value,
-    tag:document.getElementById('evTag').value
+    place_name_ko:document.getElementById('evPlaceNameKo').value,
+    place_name_en:document.getElementById('evPlaceNameEn').value,
+    lat:parseFloat(document.getElementById('evLat').value)||null,
+    lng:parseFloat(document.getElementById('evLng').value)||null,
+    kakao_place_id:document.getElementById('evKakaoId').value,
+    transport_mode:_tm?_tm.value:'',
+    warning_text:document.getElementById('evWarn').value,
+    tip_text:document.getElementById('evTip').value,
+    category:document.getElementById('evTag').value
   };
   try{
     if(EvCtx.eventId){
@@ -1902,6 +2057,94 @@ window.delEvById=async(evId)=>{
   CTrip.events=(CTrip.events||[]).filter(e=>e.id!==evId);
   showToast('✓ נמחק');renderSchedule();
 };
+
+// ── KAKAO LOCAL SEARCH ──
+const KAKAO_REST_KEY='a07eafb015f5cde04600cce29e958db8';
+let _kakaoTimer=null;
+
+window.onKakaoInput=()=>{
+  clearTimeout(_kakaoTimer);
+  const q=document.getElementById('evKakaoSearch').value.trim();
+  if(!q){document.getElementById('kakaoDropdown').style.display='none';return;}
+  _kakaoTimer=setTimeout(()=>kakaoSearch(q),350);
+};
+
+async function kakaoSearch(q){
+  try{
+    const res=await fetch(
+      `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(q)}&size=5`,
+      {headers:{Authorization:`KakaoAK ${KAKAO_REST_KEY}`}}
+    );
+    const json=await res.json();
+    renderKakaoResults(json.documents||[]);
+  }catch(e){console.warn('kakaoSearch error',e);}
+}
+
+function renderKakaoResults(places){
+  const dd=document.getElementById('kakaoDropdown');
+  if(!places.length){dd.style.display='none';return;}
+  dd.innerHTML=places.map((p,i)=>`
+    <div class="kakao-result-item" onclick="selectKakaoPlace(${JSON.stringify(p).replace(/"/g,'&quot;')})">
+      <div class="kri-name">${p.place_name}</div>
+      <div class="kri-addr">${p.road_address_name||p.address_name||''}</div>
+      <div class="kri-cat">${p.category_group_name||''}</div>
+    </div>`).join('');
+  dd.style.display='block';
+}
+
+window.selectKakaoPlace=function(p, silent){
+  document.getElementById('evLat').value=p.y;
+  document.getElementById('evLng').value=p.x;
+  document.getElementById('evKakaoId').value=p.id||'';
+  document.getElementById('evPlaceNameKo').value=p.place_name||'';
+  document.getElementById('evPlaceNameEn').value=p.place_name_en||'';
+  // Update UI
+  document.getElementById('ksNameKo').textContent=p.place_name||'';
+  document.getElementById('ksNameEn').textContent=p.place_name_en?`(${p.place_name_en})`:'';
+  document.getElementById('ksCoords').textContent=`${parseFloat(p.y).toFixed(5)}, ${parseFloat(p.x).toFixed(5)}`;
+  document.getElementById('kakaoSelected').style.display='flex';
+  document.getElementById('evMapBtn').style.display='';
+  if(!silent){
+    document.getElementById('evKakaoSearch').value='';
+    document.getElementById('kakaoDropdown').style.display='none';
+  }
+};
+
+window.clearKakaoPlace=function(){
+  ['evLat','evLng','evKakaoId','evPlaceNameKo','evPlaceNameEn'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('kakaoSelected').style.display='none';
+  document.getElementById('evMapBtn').style.display='none';
+  document.getElementById('evKakaoSearch').value='';
+  document.getElementById('kakaoDropdown').style.display='none';
+};
+
+window.openKakaoMap=function(){
+  const id=document.getElementById('evKakaoId').value;
+  const lat=document.getElementById('evLat').value;
+  const lng=document.getElementById('evLng').value;
+  if(id) window.open(`kakaomap://place?id=${id}`,'_blank');
+  else if(lat&&lng) window.open(`kakaomap://look?p=${lat},${lng}`,'_blank');
+};
+window.openKakaoMap_ev=function(id,lat,lng){
+  if(id) window.open(`kakaomap://place?id=${id}`,'_blank');
+  else if(lat&&lng) window.open(`kakaomap://look?p=${lat},${lng}`,'_blank');
+};
+
+/**
+ * calculateTransitTime — Placeholder for ODsay/T-Map routing integration.
+ * TODO: Replace with real API call to ODsay (transit) or T-Map (driving/walk).
+ * @param {number} originLat
+ * @param {number} originLng
+ * @param {number} destLat
+ * @param {number} destLng
+ * @param {string} mode  'walk' | 'transit' | 'car' | 'taxi'
+ * @returns {Promise<{minutes:number|null, summary:string}>}
+ */
+async function calculateTransitTime(originLat,originLng,destLat,destLng,mode){
+  // Placeholder — returns null until real routing API is wired up
+  console.log('[calculateTransitTime] placeholder called',{originLat,originLng,destLat,destLng,mode});
+  return {minutes:null,summary:'זמן נסיעה לא זמין'};
+}
 
 // ── NOTES / SHARE ──
 function renderNotes(){document.getElementById('notesTA').value=CTrip?.notes||'';}
