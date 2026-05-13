@@ -7,8 +7,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Journi</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 /* ═══════════════════════════════
    DESIGN TOKENS
@@ -257,16 +255,41 @@ body {
 .pri-main { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 2px; }
 .pri-sec { font-size: 11px; color: var(--ink-3); }
 .pri-item-loading { padding: 12px 14px; font-size: 13px; color: var(--ink-3); text-align: center; }
-/* ── Event form map ── */
-#evMapContainer {
-  height: 220px;
-  border-radius: var(--r) var(--r) 0 0;
-  overflow: hidden;
-  margin: -24px -20px 16px -20px;
-  position: relative;
+/* ── Event full-page screen ── */
+#screen-event {
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
-#evMap { height: 100%; width: 100%; }
-.leaflet-container { font-family: 'Inter', sans-serif; }
+#screen-event .ev-topbar {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+#screen-event .ev-back {
+  background: none; border: none;
+  font-size: 22px; cursor: pointer;
+  color: var(--ink-2); padding: 2px 6px;
+}
+#screen-event .ev-title {
+  font-size: 17px; font-weight: 700; color: var(--ink); flex: 1;
+}
+#evMap {
+  width: 100%;
+  height: 48vw;
+  max-height: 260px;
+  min-height: 180px;
+  background: var(--surface-3);
+}
+.ev-form-body {
+  flex: 1;
+  padding: 20px 20px 40px;
+  overflow-y: auto;
+}
 /* ── Place card ── */
 .place-card {
   display: flex;
@@ -1446,50 +1469,49 @@ body {
   </div>
 </div>
 
-<!-- SHEETS -->
-<!-- Event Sheet -->
-<div class="overlay" id="olEvent" onclick="closeOl(event,'olEvent')">
-  <div class="sheet" onclick="event.stopPropagation()" style="padding-top:0;overflow:hidden">
-    <div id="evMapContainer"><div id="evMap"></div></div>
-    <div style="padding:0 20px 20px">
-      <div class="sheet-handle" style="margin-top:10px"></div>
-      <div class="sheet-title" id="evSheetTitle" style="margin-top:4px">הוסף אירוע</div>
-      <!-- Place search -->
-      <div class="place-wrap" style="margin-bottom:12px">
-        <input class="field-input" id="evPlaceSearch" placeholder="חפש מקום בקוריאה..." autocomplete="off" oninput="onPlaceInput()" style="margin-bottom:0">
-        <div id="placeDropdown" style="display:none"></div>
-        <!-- Place card -->
-        <div class="place-card" id="placeSelected" style="display:none">
-          <div class="pc-photo" id="pcPhoto">📍</div>
-          <div class="pc-info">
-            <div class="pc-name" id="psName"></div>
-            <div class="pc-addr" id="psAddr"></div>
-          </div>
-          <button type="button" class="pc-clear" onclick="clearPlaceSelection()">✕</button>
+<!-- ════════ EVENT FULL-PAGE ════════ -->
+<div class="screen" id="screen-event">
+  <div class="ev-topbar">
+    <button class="ev-back" onclick="closeEventScreen()">←</button>
+    <div class="ev-title" id="evSheetTitle">הוסף אירוע</div>
+    <button class="btn-primary btn-brand" style="padding:8px 18px;font-size:14px;min-height:0" onclick="saveEvent()">שמור</button>
+  </div>
+  <!-- Map -->
+  <div id="evMap"></div>
+  <!-- Form body -->
+  <div class="ev-form-body">
+    <!-- Place search -->
+    <div class="place-wrap" style="margin-bottom:12px">
+      <input class="field-input" id="evPlaceSearch" placeholder="חפש מקום בקוריאה..." autocomplete="off" oninput="onPlaceInput()" style="margin-bottom:0">
+      <div id="placeDropdown" style="display:none"></div>
+      <!-- Place card -->
+      <div class="place-card" id="placeSelected" style="display:none">
+        <div class="pc-photo" id="pcPhoto">📍</div>
+        <div class="pc-info">
+          <div class="pc-name" id="psName"></div>
+          <div class="pc-addr" id="psAddr"></div>
         </div>
-        <!-- Hidden fields -->
-        <input type="hidden" id="evLat">
-        <input type="hidden" id="evLng">
-        <input type="hidden" id="evKakaoId">
-        <input type="hidden" id="evPlaceNameKo">
-        <input type="hidden" id="evPlaceNameEn">
-        <input type="hidden" id="evCategory">
+        <button type="button" class="pc-clear" onclick="clearPlaceSelection()">✕</button>
       </div>
-      <!-- Event details -->
-      <label class="field-label">שם האירוע</label>
-      <input class="field-input" id="evName" placeholder="שם המקום" style="margin-bottom:12px">
-      <label class="field-label">שעה</label>
-      <input class="field-input" id="evTime" type="time" style="margin-bottom:12px">
-      <label class="field-label">תיאור</label>
-      <textarea class="field-textarea" id="evDesc" placeholder="תיאור, טיפים, הערות..." style="margin-bottom:16px"></textarea>
-      <div class="btn-stack">
-        <button class="btn-primary btn-brand" onclick="saveEvent()">שמור אירוע</button>
-        <button class="btn-primary btn-danger" id="evDelBtn" onclick="deleteEvent()" style="display:none">מחק אירוע</button>
-        <button class="btn-primary btn-ghost" onclick="closeOlDirect('olEvent')">ביטול</button>
-      </div>
+      <!-- Hidden fields -->
+      <input type="hidden" id="evLat">
+      <input type="hidden" id="evLng">
+      <input type="hidden" id="evKakaoId">
+      <input type="hidden" id="evPlaceNameKo">
+      <input type="hidden" id="evPlaceNameEn">
+      <input type="hidden" id="evCategory">
     </div>
+    <label class="field-label">שם האירוע</label>
+    <input class="field-input" id="evName" placeholder="שם המקום" style="margin-bottom:12px">
+    <label class="field-label">שעה</label>
+    <input class="field-input" id="evTime" type="time" style="margin-bottom:12px">
+    <label class="field-label">תיאור</label>
+    <textarea class="field-textarea" id="evDesc" placeholder="תיאור, טיפים, הערות..." style="margin-bottom:20px"></textarea>
+    <button class="btn-primary btn-danger" id="evDelBtn" onclick="deleteEvent()" style="display:none;margin-bottom:8px;width:100%">מחק אירוע</button>
   </div>
 </div>
+
+<!-- SHEETS -->
 
 <!-- Edit Trip Sheet -->
 <div class="overlay" id="olEditTrip" onclick="closeOl(event,'olEditTrip')">
@@ -1944,18 +1966,23 @@ function renderSchedule(){
 window.toggleEv=el=>{el.classList.toggle('open');el.querySelector('.tl-body').classList.toggle('show');};
 
 // ── EVENTS ──
+window._prevScreen='trip';
+window.closeEventScreen=()=>{showScreen(window._prevScreen);};
+
 window.openAddEvent=(dayIndex)=>{
   EvCtx={dayIndex,eventId:null};
+  window._prevScreen=document.querySelector('.screen.active')?.id?.replace('screen-','')||'trip';
   document.getElementById('evSheetTitle').textContent='הוסף אירוע';
   document.getElementById('evDelBtn').style.display='none';
   ['evTime','evName','evDesc'].forEach(x=>document.getElementById(x).value='');
   clearPlaceSelection();
+  showScreen('event');
   ensureGooglePlaces();
-  document.getElementById('olEvent').classList.add('show');
 };
 window.openEditEvent=(eventId)=>{
   const ev=CTrip.events?.find(e=>e.id===eventId);if(!ev)return;
   EvCtx={dayIndex:CDayIdx,eventId};
+  window._prevScreen=document.querySelector('.screen.active')?.id?.replace('screen-','')||'trip';
   document.getElementById('evSheetTitle').textContent='ערוך אירוע';
   document.getElementById('evDelBtn').style.display='';
   document.getElementById('evTime').value=ev.event_time||ev.time||'';
@@ -1977,8 +2004,9 @@ window.openEditEvent=(eventId)=>{
     document.getElementById('placeSelected').style.display='flex';
     document.getElementById('evPlaceSearch').value=name;
   }
+  showScreen('event');
   ensureGooglePlaces();
-  document.getElementById('olEvent').classList.add('show');
+  if(ev.lat&&ev.lng)setTimeout(()=>_flyMapTo(parseFloat(ev.lat),parseFloat(ev.lng)),300);
 };
 window.saveEvent=async()=>{
   if(!EvCtx)return;
@@ -2023,7 +2051,7 @@ window.saveEvent=async()=>{
       if(ee)throw ee;
       if(ne)CTrip.events=[...(CTrip.events||[]),ne];
     }
-    closeOlDirect('olEvent');
+    closeEventScreen();
     showToast('✓ נשמר');
     renderSchedule();
   }catch(e){
@@ -2031,7 +2059,7 @@ window.saveEvent=async()=>{
     showToast('שגיאה בשמירה: '+(e.message||e.details||JSON.stringify(e)));
   }
 };
-window.deleteEvent=()=>{if(EvCtx?.eventId)delEvById(EvCtx.eventId);closeOlDirect('olEvent');};
+window.deleteEvent=()=>{if(EvCtx?.eventId)delEvById(EvCtx.eventId);closeEventScreen();};
 window.delEvById=async(evId)=>{
   if(!confirm('למחוק?'))return;
   await sb.from('events').delete().eq('id',evId);
@@ -2043,8 +2071,9 @@ window.delEvById=async(evId)=>{
 const GMAP_KEY='AIzaSyB63LfTOff_65UkNG1vMTZ3NKLaEqSNhc4';
 let _searchTimer=null;
 let _evMap=null, _evMarker=null;
+let _gmapsLoading=false, _gmapsReady=false;
 
-const SEOUL=[37.5665,126.9780];
+const SEOUL_LAT=37.5665, SEOUL_LNG=126.9780;
 
 function _detectCategory(primaryType=''){
   const t=(primaryType||'').toLowerCase();
@@ -2056,30 +2085,48 @@ function _detectCategory(primaryType=''){
   return'sight';
 }
 
-function initEvMap(){
-  if(_evMap){_evMap.invalidateSize();return;}
+window._gmapsMapReady=function(){
+  _gmapsReady=true;
+  _initGMap();
+};
+
+function _loadGMaps(){
+  if(_gmapsReady){_initGMap();return;}
+  if(_gmapsLoading)return;
+  _gmapsLoading=true;
+  const s=document.createElement('script');
+  s.src=`https://maps.googleapis.com/maps/api/js?key=${GMAP_KEY}&callback=_gmapsMapReady`;
+  s.async=true;
+  s.onerror=()=>{_gmapsLoading=false;};
+  document.head.appendChild(s);
+}
+
+function _initGMap(){
   const el=document.getElementById('evMap');
-  if(!el||typeof L==='undefined')return;
-  _evMap=L.map(el,{zoomControl:false,attributionControl:false});
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(_evMap);
-  _evMap.setView(SEOUL,12);
-  // try geolocation
-  navigator.geolocation?.getCurrentPosition(p=>{
-    _evMap.setView([p.coords.latitude,p.coords.longitude],14);
-  },()=>{});
+  if(!el||!window.google?.maps?.Map)return;
+  if(_evMap){google.maps.event.trigger(_evMap,'resize');return;}
+  _evMap=new google.maps.Map(el,{
+    center:{lat:SEOUL_LAT,lng:SEOUL_LNG},
+    zoom:12,
+    disableDefaultUI:true,
+    gestureHandling:'greedy',
+    styles:[{featureType:'poi',stylers:[{visibility:'simplified'}]}]
+  });
 }
 
 function _flyMapTo(lat,lng){
   if(!_evMap)return;
-  if(_evMarker)_evMarker.remove();
-  _evMarker=L.marker([lat,lng]).addTo(_evMap);
-  _evMap.flyTo([lat,lng],16,{animate:true,duration:1});
+  _evMap.panTo({lat,lng});
+  _evMap.setZoom(16);
+  if(_evMarker)_evMarker.setMap(null);
+  _evMarker=new google.maps.Marker({position:{lat,lng},map:_evMap,animation:google.maps.Animation.DROP});
 }
 
 function _resetMap(){
   if(!_evMap)return;
-  if(_evMarker){_evMarker.remove();_evMarker=null;}
-  _evMap.setView(SEOUL,12);
+  if(_evMarker){_evMarker.setMap(null);_evMarker=null;}
+  _evMap.panTo({lat:SEOUL_LAT,lng:SEOUL_LNG});
+  _evMap.setZoom(12);
 }
 
 window.onPlaceInput=function(){
@@ -2185,8 +2232,7 @@ window.onPlaceSelect=async function(encodedId,safeName){
 };
 
 function ensureGooglePlaces(){
-  // init map on next tick so DOM is ready
-  requestAnimationFrame(()=>setTimeout(initEvMap,50));
+  requestAnimationFrame(()=>setTimeout(_loadGMaps,80));
 }
 
 window.clearPlaceSelection=function(){
