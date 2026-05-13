@@ -7,6 +7,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Journi</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 /* ═══════════════════════════════
    DESIGN TOKENS
@@ -255,10 +257,41 @@ body {
 .pri-main { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 2px; }
 .pri-sec { font-size: 11px; color: var(--ink-3); }
 .pri-item-loading { padding: 12px 14px; font-size: 13px; color: var(--ink-3); text-align: center; }
-.pac-item:hover, .pac-item-selected { background: var(--brand-light) !important; }
-.pac-item-query { font-size: 14px !important; font-weight: 600 !important; color: var(--ink) !important; }
-.pac-matched { font-weight: 700 !important; color: var(--brand) !important; }
-.pac-icon { display: none !important; } /* hide the default pin icon for cleaner look */
+/* ── Event form map ── */
+#evMapContainer {
+  height: 220px;
+  border-radius: var(--r) var(--r) 0 0;
+  overflow: hidden;
+  margin: -24px -20px 16px -20px;
+  position: relative;
+}
+#evMap { height: 100%; width: 100%; }
+.leaflet-container { font-family: 'Inter', sans-serif; }
+/* ── Place card ── */
+.place-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+  margin-top: 8px;
+}
+.pc-photo {
+  width: 56px; height: 56px;
+  border-radius: 8px;
+  background: var(--surface-3);
+  flex-shrink: 0;
+  overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+}
+.pc-photo img { width: 100%; height: 100%; object-fit: cover; }
+.pc-info { flex: 1; min-width: 0; }
+.pc-name { font-size: 14px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pc-addr { font-size: 11px; color: var(--ink-3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pc-clear { background: none; border: none; color: var(--ink-3); font-size: 16px; cursor: pointer; padding: 4px; flex-shrink: 0; }
 
 /* ═══════════════════════════════
    APP SHELL (sticky header)
@@ -1416,54 +1449,44 @@ body {
 <!-- SHEETS -->
 <!-- Event Sheet -->
 <div class="overlay" id="olEvent" onclick="closeOl(event,'olEvent')">
-  <div class="sheet" onclick="event.stopPropagation()">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title" id="evSheetTitle">הוסף אירוע</div>
-    <label class="field-label">שעה</label>
-    <input class="field-input" id="evTime" type="time" style="margin-bottom:12px">
-    <label class="field-label">אמוג׳י</label>
-    <input class="field-input" id="evEmoji" placeholder="📍" maxlength="3" style="margin-bottom:12px">
-    <label class="field-label">שם האירוע</label>
-    <input class="field-input" id="evName" placeholder="שם המקום" style="margin-bottom:12px">
-    <label class="field-label">תיאור</label>
-    <textarea class="field-textarea" id="evDesc" placeholder="תיאור מפורט..." style="margin-bottom:12px"></textarea>
-    <label class="field-label">חיפוש מקום</label>
-    <div class="place-wrap" style="margin-bottom:12px">
-      <input class="field-input" id="evPlaceSearch" placeholder="Search for a place in Korea..." autocomplete="off" oninput="onPlaceInput()" style="margin-bottom:0">
-      <div id="placeDropdown" style="display:none"></div>
-      <div class="place-selected" id="placeSelected" style="display:none">
-        <div class="place-info">
-          <span class="ps-name" id="psName"></span>
-          <span class="ps-addr" id="psAddr"></span>
-          <span class="ps-coords" id="psCoords"></span>
+  <div class="sheet" onclick="event.stopPropagation()" style="padding-top:0;overflow:hidden">
+    <div id="evMapContainer"><div id="evMap"></div></div>
+    <div style="padding:0 20px 20px">
+      <div class="sheet-handle" style="margin-top:10px"></div>
+      <div class="sheet-title" id="evSheetTitle" style="margin-top:4px">הוסף אירוע</div>
+      <!-- Place search -->
+      <div class="place-wrap" style="margin-bottom:12px">
+        <input class="field-input" id="evPlaceSearch" placeholder="חפש מקום בקוריאה..." autocomplete="off" oninput="onPlaceInput()" style="margin-bottom:0">
+        <div id="placeDropdown" style="display:none"></div>
+        <!-- Place card -->
+        <div class="place-card" id="placeSelected" style="display:none">
+          <div class="pc-photo" id="pcPhoto">📍</div>
+          <div class="pc-info">
+            <div class="pc-name" id="psName"></div>
+            <div class="pc-addr" id="psAddr"></div>
+          </div>
+          <button type="button" class="pc-clear" onclick="clearPlaceSelection()">✕</button>
         </div>
-        <button type="button" class="ps-clear" onclick="clearPlaceSelection()">✕</button>
+        <!-- Hidden fields -->
+        <input type="hidden" id="evLat">
+        <input type="hidden" id="evLng">
+        <input type="hidden" id="evKakaoId">
+        <input type="hidden" id="evPlaceNameKo">
+        <input type="hidden" id="evPlaceNameEn">
+        <input type="hidden" id="evCategory">
       </div>
-      <div id="evMapPreview" style="display:none;height:180px"></div>
-      <!-- Hidden fields -->
-      <input type="hidden" id="evLat">
-      <input type="hidden" id="evLng">
-      <input type="hidden" id="evKakaoId">
-      <input type="hidden" id="evPlaceNameKo">
-      <input type="hidden" id="evPlaceNameEn">
-    </div>
-    <label class="field-label">אזהרה</label>
-    <input class="field-input" id="evWarn" placeholder="⚠️ סגור שלישי..." style="margin-bottom:12px">
-    <label class="field-label">טיפ</label>
-    <input class="field-input" id="evTip" placeholder="✓ להגיע מוקדם..." style="margin-bottom:12px">
-    <label class="field-label">קטגוריה</label>
-    <select class="field-select" id="evTag" style="margin-bottom:12px">
-      <option value="sight">📍 אטרקציה</option>
-      <option value="food">🍽️ אוכל</option>
-      <option value="sleep">🏨 מלון</option>
-      <option value="shop">🛍️ קניות</option>
-      <option value="night">🌙 לילה</option>
-      <option value="move">🚇 נסיעה</option>
-    </select>
-    <div class="btn-stack">
-      <button class="btn-primary btn-brand" onclick="saveEvent()">שמור אירוע</button>
-      <button class="btn-primary btn-danger" id="evDelBtn" onclick="deleteEvent()" style="display:none">מחק אירוע</button>
-      <button class="btn-primary btn-ghost" onclick="closeOlDirect('olEvent')">ביטול</button>
+      <!-- Event details -->
+      <label class="field-label">שם האירוע</label>
+      <input class="field-input" id="evName" placeholder="שם המקום" style="margin-bottom:12px">
+      <label class="field-label">שעה</label>
+      <input class="field-input" id="evTime" type="time" style="margin-bottom:12px">
+      <label class="field-label">תיאור</label>
+      <textarea class="field-textarea" id="evDesc" placeholder="תיאור, טיפים, הערות..." style="margin-bottom:16px"></textarea>
+      <div class="btn-stack">
+        <button class="btn-primary btn-brand" onclick="saveEvent()">שמור אירוע</button>
+        <button class="btn-primary btn-danger" id="evDelBtn" onclick="deleteEvent()" style="display:none">מחק אירוע</button>
+        <button class="btn-primary btn-ghost" onclick="closeOlDirect('olEvent')">ביטול</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1925,8 +1948,7 @@ window.openAddEvent=(dayIndex)=>{
   EvCtx={dayIndex,eventId:null};
   document.getElementById('evSheetTitle').textContent='הוסף אירוע';
   document.getElementById('evDelBtn').style.display='none';
-  ['evTime','evEmoji','evName','evDesc','evWarn','evTip'].forEach(x=>document.getElementById(x).value='');
-  document.getElementById('evTag').value='sight';
+  ['evTime','evName','evDesc'].forEach(x=>document.getElementById(x).value='');
   clearPlaceSelection();
   ensureGooglePlaces();
   document.getElementById('olEvent').classList.add('show');
@@ -1937,12 +1959,8 @@ window.openEditEvent=(eventId)=>{
   document.getElementById('evSheetTitle').textContent='ערוך אירוע';
   document.getElementById('evDelBtn').style.display='';
   document.getElementById('evTime').value=ev.event_time||ev.time||'';
-  document.getElementById('evEmoji').value=ev.emoji||'📍';
   document.getElementById('evName').value=ev.title||ev.name||'';
   document.getElementById('evDesc').value=ev.description||'';
-  document.getElementById('evWarn').value=ev.warning_text||ev.warning||'';
-  document.getElementById('evTip').value=ev.tip_text||ev.tip||'';
-  document.getElementById('evTag').value=ev.category||ev.tag||'sight';
   clearPlaceSelection();
   if(ev.lat&&ev.lng){
     const lat=parseFloat(ev.lat), lng=parseFloat(ev.lng);
@@ -1952,9 +1970,10 @@ window.openEditEvent=(eventId)=>{
     document.getElementById('evPlaceNameEn').value=name;
     document.getElementById('evPlaceNameKo').value=name;
     document.getElementById('evKakaoId').value=ev.kakao_place_id||'';
+    document.getElementById('evCategory').value=ev.category||'sight';
     document.getElementById('psName').textContent=name;
     document.getElementById('psAddr').textContent='';
-    document.getElementById('psCoords').textContent=`${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    document.getElementById('pcPhoto').textContent='📍';
     document.getElementById('placeSelected').style.display='flex';
     document.getElementById('evPlaceSearch').value=name;
   }
@@ -1966,7 +1985,7 @@ window.saveEvent=async()=>{
   const btn=document.getElementById('evSheetTitle');
   const evData={
     event_time:document.getElementById('evTime').value||'00:00',
-    emoji:document.getElementById('evEmoji').value||'📍',
+    emoji:'📍',
     name:document.getElementById('evName').value||'אירוע',
     title:document.getElementById('evName').value||'אירוע',
     description:document.getElementById('evDesc').value,
@@ -1975,9 +1994,9 @@ window.saveEvent=async()=>{
     lat:parseFloat(document.getElementById('evLat').value)||null,
     lng:parseFloat(document.getElementById('evLng').value)||null,
     kakao_place_id:document.getElementById('evKakaoId').value||null,
-    warning_text:document.getElementById('evWarn').value,
-    tip_text:document.getElementById('evTip').value,
-    category:document.getElementById('evTag').value
+    warning_text:'',
+    tip_text:'',
+    category:document.getElementById('evCategory').value||'sight'
   };
   try{
     if(EvCtx.eventId){
@@ -2023,6 +2042,45 @@ window.delEvById=async(evId)=>{
 // ── GOOGLE PLACES (New API — fetch only, no JS SDK) ──
 const GMAP_KEY='AIzaSyB63LfTOff_65UkNG1vMTZ3NKLaEqSNhc4';
 let _searchTimer=null;
+let _evMap=null, _evMarker=null;
+
+const SEOUL=[37.5665,126.9780];
+
+function _detectCategory(primaryType=''){
+  const t=(primaryType||'').toLowerCase();
+  if(/restaurant|food|cafe|bakery|meal_takeaway|bar|coffee|meal_delivery/.test(t))return'food';
+  if(/lodging|hotel|motel|hostel|guest_house/.test(t))return'sleep';
+  if(/shopping|store|market|mall|clothing|electronics/.test(t))return'shop';
+  if(/night_club|casino|entertainment/.test(t))return'night';
+  if(/transit|station|airport|subway|bus|train/.test(t))return'move';
+  return'sight';
+}
+
+function initEvMap(){
+  if(_evMap){_evMap.invalidateSize();return;}
+  const el=document.getElementById('evMap');
+  if(!el||typeof L==='undefined')return;
+  _evMap=L.map(el,{zoomControl:false,attributionControl:false});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(_evMap);
+  _evMap.setView(SEOUL,12);
+  // try geolocation
+  navigator.geolocation?.getCurrentPosition(p=>{
+    _evMap.setView([p.coords.latitude,p.coords.longitude],14);
+  },()=>{});
+}
+
+function _flyMapTo(lat,lng){
+  if(!_evMap)return;
+  if(_evMarker)_evMarker.remove();
+  _evMarker=L.marker([lat,lng]).addTo(_evMap);
+  _evMap.flyTo([lat,lng],16,{animate:true,duration:1});
+}
+
+function _resetMap(){
+  if(!_evMap)return;
+  if(_evMarker){_evMarker.remove();_evMarker=null;}
+  _evMap.setView(SEOUL,12);
+}
 
 window.onPlaceInput=function(){
   const q=document.getElementById('evPlaceSearch').value.trim();
@@ -2088,7 +2146,7 @@ window.onPlaceSelect=async function(encodedId,safeName){
     const res=await fetch(`https://places.googleapis.com/v1/places/${placeId}`,{
       headers:{
         'X-Goog-Api-Key':GMAP_KEY,
-        'X-Goog-FieldMask':'id,displayName,formattedAddress,location'
+        'X-Goog-FieldMask':'id,displayName,formattedAddress,location,primaryType,photos'
       }
     });
     const place=await res.json();
@@ -2097,36 +2155,47 @@ window.onPlaceSelect=async function(encodedId,safeName){
     const lng=place.location.longitude;
     const name=place.displayName?.text||displayName;
     const addr=place.formattedAddress||'';
+    const category=_detectCategory(place.primaryType);
     document.getElementById('evLat').value=lat;
     document.getElementById('evLng').value=lng;
     document.getElementById('evPlaceNameEn').value=name;
     document.getElementById('evPlaceNameKo').value=name;
     document.getElementById('evKakaoId').value='';
+    document.getElementById('evCategory').value=category;
     document.getElementById('psName').textContent=name;
     document.getElementById('psAddr').textContent=addr;
-    document.getElementById('psCoords').textContent=`${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    // Auto-fill event name (editable)
+    if(!document.getElementById('evName').value)
+      document.getElementById('evName').value=name;
+    // Place card photo
+    const photoEl=document.getElementById('pcPhoto');
+    const firstPhoto=place.photos?.[0];
+    if(firstPhoto?.name){
+      const photoUrl=`https://places.googleapis.com/v1/${firstPhoto.name}/media?maxWidthPx=160&key=${GMAP_KEY}`;
+      photoEl.innerHTML=`<img src="${photoUrl}" onerror="this.parentElement.textContent='📍'" alt="${name}">`;
+    } else {
+      photoEl.textContent='📍';
+    }
     document.getElementById('placeSelected').style.display='flex';
-    const mapDiv=document.getElementById('evMapPreview');
-    mapDiv.style.display='block';
-    mapDiv.innerHTML=`<img
-      src="https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=15&size=600x200&scale=2&markers=color:red%7C${lat},${lng}&key=${GMAP_KEY}"
-      style="width:100%;height:180px;object-fit:cover;border-radius:12px"
-      onerror="this.parentElement.style.display='none'"
-      alt="${name}" loading="lazy">`;
+    // Fly interactive map
+    _flyMapTo(lat,lng);
   }catch(e){
     console.error('[Places] details fetch error',e);
   }
 };
 
-function ensureGooglePlaces(){/* no-op: fetch-based, no SDK preload needed */}
+function ensureGooglePlaces(){
+  // init map on next tick so DOM is ready
+  requestAnimationFrame(()=>setTimeout(initEvMap,50));
+}
 
 window.clearPlaceSelection=function(){
-  ['evLat','evLng','evKakaoId','evPlaceNameKo','evPlaceNameEn'].forEach(id=>document.getElementById(id).value='');
+  ['evLat','evLng','evKakaoId','evPlaceNameKo','evPlaceNameEn','evCategory'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('placeSelected').style.display='none';
-  document.getElementById('evMapPreview').style.display='none';
   document.getElementById('evPlaceSearch').value='';
   const dd=document.getElementById('placeDropdown');
   if(dd){dd.style.display='none';dd.innerHTML='';}
+  _resetMap();
 };
 
 window.openGoogleMapsLink=function(lat,lng,name){
