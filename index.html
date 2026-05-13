@@ -994,7 +994,6 @@ body {
 .settings-row-sub { font-size:12px; color:var(--ink-3); margin-top:2px; }
 .settings-chevron { color:var(--ink-4); font-size:20px; }
 </style>
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB63LFtOFf_65UkNG1vMTZ3NKLaEqSNhc4&libraries=places&language=en&loading=async&callback=initGooglePlaces" async defer></script>
 </head>
 <body>
 
@@ -1995,25 +1994,55 @@ window.delEvById=async(evId)=>{
   showToast('✓ נמחק');renderSchedule();
 };
 
-// ── GOOGLE PLACES AUTOCOMPLETE ──
+// ── GOOGLE PLACES — DYNAMIC LAZY LOADER ──
+// Script is injected on first form open (avoids loading=async warning, no race condition)
 let _gAutocomplete=null;
 let _gMap=null;
 let _gMarker=null;
+let _mapsLoading=false;
+
+// Called by Google Maps SDK once fully loaded (set as callback= in script URL)
+window.initGooglePlaces=function(){
+  if(typeof window._gPlacesCb==='function'){
+    window._gPlacesCb();
+    window._gPlacesCb=null;
+  }
+};
+
+function loadGoogleMaps(cb){
+  // Already loaded
+  if(window.google?.maps?.places){cb();return;}
+  // Queuing — SDK currently downloading
+  window._gPlacesCb=cb;
+  if(_mapsLoading)return;
+  _mapsLoading=true;
+  const s=document.createElement('script');
+  s.src='https://maps.googleapis.com/maps/api/js'
+      +'?key=AIzaSyB63LFtOFf_65UkNG1vMTZ3NKLaEqSNhc4'
+      +'&libraries=places&language=en&callback=initGooglePlaces';
+  s.async=true;
+  s.onerror=()=>{
+    _mapsLoading=false;
+    showToast('שגיאה: לא הצלחנו לטעון את Google Maps');
+  };
+  document.head.appendChild(s);
+}
 
 function _attachAutocomplete(){
   const input=document.getElementById('evPlaceSearch');
   if(!input||!window.google?.maps?.places)return;
-  // Detach old instance if any
+  // Remove previous instance from this input element
   if(_gAutocomplete){
     google.maps.event.clearInstanceListeners(_gAutocomplete);
     _gAutocomplete=null;
   }
   _gAutocomplete=new google.maps.places.Autocomplete(input,{
-    fields:['name','formatted_address','geometry','place_id']
+    fields:['name','formatted_address','geometry','place_id'],
+    componentRestrictions:{country:'kr'}
   });
   _gAutocomplete.addListener('place_changed',()=>{
     const place=_gAutocomplete.getPlace();
-    if(!place.geometry)return;
+    if(!place?.geometry?.location)return;
     const lat=place.geometry.location.lat();
     const lng=place.geometry.location.lng();
     const name=place.name||'';
@@ -2027,30 +2056,22 @@ function _attachAutocomplete(){
     document.getElementById('psAddr').textContent=addr;
     document.getElementById('psCoords').textContent=`${lat.toFixed(5)}, ${lng.toFixed(5)}`;
     document.getElementById('placeSelected').style.display='flex';
+    // Mini map preview
     const mapDiv=document.getElementById('evMapPreview');
     mapDiv.style.display='block';
+    const pos={lat,lng};
     if(!_gMap){
-      _gMap=new google.maps.Map(mapDiv,{
-        center:{lat,lng},zoom:15,
-        disableDefaultUI:true,zoomControl:true
-      });
-      _gMarker=new google.maps.Marker({position:{lat,lng},map:_gMap});
+      _gMap=new google.maps.Map(mapDiv,{center:pos,zoom:15,disableDefaultUI:true,zoomControl:true});
+      _gMarker=new google.maps.Marker({position:pos,map:_gMap});
     }else{
-      const pos={lat,lng};
       _gMap.setCenter(pos);_gMap.setZoom(15);_gMarker.setPosition(pos);
     }
-    setTimeout(()=>google.maps.event.trigger(_gMap,'resize'),60);
+    setTimeout(()=>google.maps.event.trigger(_gMap,'resize'),80);
   });
 }
 
-// Called by openAddEvent / openEditEvent — works whether SDK loaded yet or not
 function ensureGooglePlaces(){
-  if(window._googlePlacesReady){
-    _attachAutocomplete();
-  }else{
-    // SDK not ready yet — queue the attach; initGooglePlaces will fire it
-    window._googlePlacesInitCb=_attachAutocomplete;
-  }
+  loadGoogleMaps(_attachAutocomplete);
 }
 
 window.clearPlaceSelection=function(){
@@ -2152,14 +2173,6 @@ function esc(s){return String(s).replace(/'/g,"\\'").replace(/"/g,'&quot;');}
 </script>
 
 <script>
-// ── Google Places bootstrap (must be global, called by Maps SDK before module loads) ──
-window._googlePlacesReady=false;
-window._googlePlacesInitCb=null;
-window.initGooglePlaces=function(){
-  window._googlePlacesReady=true;
-  if(typeof window._googlePlacesInitCb==='function')window._googlePlacesInitCb();
-};
-
 // ── UI helpers ──
 function showScreen(n){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
