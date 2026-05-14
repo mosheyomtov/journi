@@ -1873,6 +1873,7 @@ async function openTrip(id){
     .subscribe();
   document.getElementById('shareUrl').textContent=`${location.origin}${location.pathname}?trip=${id}`;
   showScreen('trip');
+  renderTripDetail();
 }
 window.openTrip=openTrip;
 
