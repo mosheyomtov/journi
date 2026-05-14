@@ -2239,7 +2239,7 @@ window.setSegMode = function(uid, mode) {
   _updateSegUI(uid);
   closeSegDrawer();
   // Redraw map with updated mode colors
-  if (window._lastDayEvs) renderKakaoRoute(window._lastDayEvs, window._lastSegPaths);
+  if (window._lastDayEvs) renderKakaoRoute(window._lastDayEvs);
 };
 
 // ── Directions app drawer ──
@@ -2318,7 +2318,6 @@ function _updateSegUI(uid) {
 }
 
 async function loadRouteTimesForDay(dayEvs) {
-  const segmentPaths = new Array(Math.max(0, dayEvs.length - 1)).fill(null);
   // Load all segments in parallel
   await Promise.all(dayEvs.slice(1).map(async (curr, idx) => {
     const prev = dayEvs[idx];
@@ -2338,7 +2337,7 @@ async function loadRouteTimesForDay(dayEvs) {
         curr:        { lat: destination.lat, lng: destination.lng,
                        name: curr.title||curr.name||'' }
       };
-      if (data.drivingPath?.length) segmentPaths[idx] = data.drivingPath;
+      // drivingPath already stored in _segData[uid] above
       _updateSegUI(uid);
     } catch(e) {
       console.error('[route-times]', uid, e);
@@ -2348,8 +2347,8 @@ async function loadRouteTimesForDay(dayEvs) {
       if (textEl) textEl.textContent = '—';
     }
   }));
-  // Redraw map with real road geometry + per-segment mode colors
-  renderKakaoRoute(dayEvs, segmentPaths);
+  // Redraw map — renderKakaoRoute reads road paths from _segData by uid
+  renderKakaoRoute(dayEvs);
 }
 
 // _setDurations removed — replaced by _updateSegUI + _segData
@@ -2517,13 +2516,14 @@ function _initKakaoMap() {
 }
 
 const _MODE_COLOR  = { walk: '#22C55E', transit: '#8B5CF6', car: '#3B6EF5' };
-const _MODE_STYLE  = { walk: 'dashed',  transit: 'solid',   car: 'solid'   };
+const _MODE_WEIGHT = { walk: 3,         transit: 4,         car: 4         };
 
-// segmentPaths: array of [{lat,lng}] per segment — null = straight line fallback
-function renderKakaoRoute(dayEvs, segmentPaths = []) {
-  window._lastDayEvs  = dayEvs;
-  window._lastSegPaths = segmentPaths;
-  const pts = dayEvs.filter(e => e.lat && e.lng);
+// Draws the day route map.
+// Looks up road geometry from _segData[uid].drivingPath — no index mismatch
+// even when some events have no location data.
+function renderKakaoRoute(dayEvs) {
+  window._lastDayEvs = dayEvs;
+  const pts     = dayEvs.filter(e => e.lat && e.lng);
   const emptyEl = document.getElementById('dayMapEmpty');
 
   if (!pts.length) {
@@ -2546,52 +2546,51 @@ function renderKakaoRoute(dayEvs, segmentPaths = []) {
 
     // ── numbered custom overlays ──
     pts.forEach((ev, i) => {
-      const cls = i === 0 ? 'first' : i === pts.length - 1 ? 'last' : '';
-      const label = i === 0 ? '★' : String(i + 1);
+      const cls     = i === 0 ? 'first' : i === pts.length - 1 ? 'last' : '';
+      const label   = i === 0 ? '★' : String(i + 1);
       const content = `<div class="kk-pin ${cls}">${label}</div>`;
       const overlay = new kakao.maps.CustomOverlay({
-        position: kakaoPoints[i],
-        content, yAnchor: 0.5, xAnchor: 0.5, zIndex: 3
+        position: kakaoPoints[i], content, yAnchor: 0.5, xAnchor: 0.5, zIndex: 3
       });
       overlay.setMap(_kkMap);
       _kkOverlays.push(overlay);
     });
 
-    // ── polylines per segment ──
-    for (let i = 0; i < kakaoPoints.length - 1; i++) {
-      const nextEv  = pts[i + 1];
-      const uid     = nextEv?.id?.replace(/-/g,'').slice(0,8);
-      const mode    = (_segData[uid]?.mode) || 'car';
-      const color   = _MODE_COLOR[mode]  || '#3B6EF5';
-      const style   = _MODE_STYLE[mode]  || 'solid';
+    // ── polylines — look up by uid, not array index ──
+    const bounds = new kakao.maps.LatLngBounds();
+    kakaoPoints.forEach(p => bounds.extend(p));
 
-      // For walking: straight line (no driving path); transit: straight; car: real roads
-      const roadPath = (mode === 'car') ? segmentPaths[i] : null;
-      const path = roadPath && roadPath.length > 1
-        ? roadPath.map(p => new kakao.maps.LatLng(p.lat, p.lng))
+    for (let i = 0; i < pts.length - 1; i++) {
+      const nextEv   = pts[i + 1];
+      const uid      = nextEv?.id?.replace(/-/g, '').slice(0, 8);
+      const segEntry = _segData[uid];
+      const mode     = segEntry?.mode || 'car';
+      const color    = _MODE_COLOR[mode]  || '#3B6EF5';
+      const weight   = _MODE_WEIGHT[mode] || 4;
+
+      // Use real road geometry for ALL modes — road is road regardless of vehicle.
+      // Straight line only as fallback while API data is still loading.
+      const roadPath = segEntry?.drivingPath;
+      const path = (roadPath && roadPath.length > 1)
+        ? roadPath.map(p => {
+            const ll = new kakao.maps.LatLng(p.lat, p.lng);
+            bounds.extend(ll);
+            return ll;
+          })
         : [kakaoPoints[i], kakaoPoints[i + 1]];
 
       const line = new kakao.maps.Polyline({
         path,
-        strokeWeight: mode === 'walk' ? 3 : 4,
-        strokeColor: color,
+        strokeWeight:  weight,
+        strokeColor:   color,
         strokeOpacity: 0.9,
-        strokeStyle: style
+        strokeStyle:   'solid'
       });
       line.setMap(_kkMap);
       _kkPolylines.push(line);
     }
 
-    // ── fit bounds to all road points ──
-    const bounds = new kakao.maps.LatLngBounds();
-    kakaoPoints.forEach(p => bounds.extend(p));
-    // also extend to road geometry for better fit
-    segmentPaths.forEach(path => {
-      if (path) path.forEach(p => bounds.extend(new kakao.maps.LatLng(p.lat, p.lng)));
-    });
     _kkMap.setBounds(bounds, 70, 70, 100, 70);
-
-    // ── trigger resize (map may have been hidden) ──
     kakao.maps.event.trigger(_kkMap, 'resize');
   });
 }
