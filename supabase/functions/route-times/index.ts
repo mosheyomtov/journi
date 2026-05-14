@@ -63,13 +63,17 @@ serve(async (req) => {
       walking = fmt(walkMin);
 
       // ── Transit: prefer subway (pathType=1), else best by totalTime ──
+      // pathType: 1=subway only, 2=bus only, 3=mixed subway+bus
       const paths: any[] = result?.path ?? [];
-      // pathType 1=subway, 2=bus, 3=mixed; prefer subway for reliability
       const subwayPath = paths.find((p: any) => p.pathType === 1);
       const bestPath = subwayPath ?? paths[0];
-      const totalMin: number | undefined = bestPath?.info?.totalTime;
-      if (totalMin != null && typeof totalMin === "number") {
-        transit = fmt(totalMin);
+      const rawMin: number | undefined = bestPath?.info?.totalTime;
+      if (rawMin != null && typeof rawMin === "number") {
+        // Bus-only routes (pathType=2) use scheduled "best-case" wait times.
+        // Real headways on non-urban routes (e.g. Jeju) are 30-60 min,
+        // so multiply by 1.5 to approximate realistic total travel time.
+        const adjustedMin = bestPath.pathType === 2 ? rawMin * 1.5 : rawMin;
+        transit = fmt(adjustedMin);
       } else {
         transit = "אין קו ישיר";
         console.warn("ODsay no path:", JSON.stringify(odsayData).slice(0, 200));
