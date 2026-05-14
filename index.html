@@ -572,6 +572,35 @@ body {
 ═══════════════════════════════ */
 #screen-trip { background: var(--bg); }
 
+/* ── Kakao day map ── */
+#dayMapWrap {
+  position: relative;
+  width: 100%;
+  height: 240px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+#dayMap { width: 100%; height: 100%; }
+.day-map-empty {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 6px; color: var(--ink-3); font-size: 13px;
+}
+/* Kakao custom numbered pin */
+.kk-pin {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--brand); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700;
+  border: 2.5px solid #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.28);
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+}
+.kk-pin.first { background: var(--green); }
+.kk-pin.last  { background: var(--rose); }
+
 .trip-header-section {
   background: #fff;
   padding: 16px 20px 0;
@@ -1430,6 +1459,13 @@ body {
   <div style="overflow-y:auto;flex:1">
     <!-- SCHEDULE -->
     <div class="tab-pane active" id="tab-schedule">
+      <div id="dayMapWrap">
+        <div id="dayMap"></div>
+        <div class="day-map-empty" id="dayMapEmpty" style="display:none">
+          <span style="font-size:28px">🗺️</span>
+          <span>הוסף אירועים עם מיקום כדי לראות את המסלול</span>
+        </div>
+      </div>
       <div class="day-pills" id="dayPills"></div>
       <div class="timeline" id="tlBody"></div>
       <button class="add-event-btn" id="addEvBtn" onclick="openAddEvent(window._CDayIdx||0)">+ הוסף אירוע ליום</button>
@@ -1985,6 +2021,7 @@ function renderSchedule(){
   document.getElementById('addEvBtn').onclick=()=>openAddEvent(CDayIdx);
   if(!dayEvs.length){
     body.innerHTML=`<div class="empty-state" style="border:1.5px dashed var(--border-2)"><div class="empty-icon">📅</div><div class="empty-title">אין אירועים ביום הזה</div><div class="empty-desc">לחץ + כדי להוסיף</div></div>`;
+    renderKakaoRoute([]); // show empty map state
     return;
   }
   const TRANSPORT_LABELS={walk:'🚶 הליכה',transit:'🚇 תחבורה ציבורית',car:'🚗 רכב פרטי',taxi:'🚕 מונית'};
@@ -2055,6 +2092,8 @@ function renderSchedule(){
       </div>
     </div>`;
   }).join('');
+  // ── Kakao day route map ──
+  renderKakaoRoute(dayEvs);
   // kick off route-time calculations for consecutive events
   loadRouteTimesForDay(dayEvs);
 }
@@ -2240,6 +2279,103 @@ window.delEvById=async(evId)=>{
   CTrip.events=(CTrip.events||[]).filter(e=>e.id!==evId);
   showToast('✓ נמחק');renderSchedule();
 };
+
+// ══════════════════════════════════════════════════
+// KAKAO MAPS — day route map
+// ══════════════════════════════════════════════════
+const KAKAO_JS_KEY = '546de53c306a839dfeb7702be1bfe856';
+let _kkLoading = false, _kkReady = false;
+let _kkMap = null;
+let _kkOverlays = [];   // CustomOverlay markers
+let _kkPolyline = null; // route line
+
+function _loadKakaoMaps(cb) {
+  if (_kkReady) { cb && cb(); return; }
+  if (_kkLoading) { _kkPending = cb; return; }
+  _kkLoading = true;
+  window._kkPending = cb;
+  const s = document.createElement('script');
+  s.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_JS_KEY}&autoload=false`;
+  s.async = true;
+  s.onload = () => {
+    kakao.maps.load(() => {
+      _kkReady = true;
+      _kkLoading = false;
+      if (window._kkPending) { window._kkPending(); window._kkPending = null; }
+    });
+  };
+  document.head.appendChild(s);
+}
+
+function _initKakaoMap() {
+  const el = document.getElementById('dayMap');
+  if (!el || !window.kakao?.maps) return;
+  if (_kkMap) return; // already initialized
+  _kkMap = new kakao.maps.Map(el, {
+    center: new kakao.maps.LatLng(36.5, 127.5), // Korea center
+    level: 7
+  });
+}
+
+function renderKakaoRoute(dayEvs) {
+  const pts = dayEvs.filter(e => e.lat && e.lng);
+  const emptyEl = document.getElementById('dayMapEmpty');
+  const wrapEl  = document.getElementById('dayMapWrap');
+
+  if (!pts.length) {
+    if (emptyEl) emptyEl.style.display = 'flex';
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = 'none';
+
+  _loadKakaoMaps(() => {
+    _initKakaoMap();
+    if (!_kkMap) return;
+
+    // ── clear previous overlays & polyline ──
+    _kkOverlays.forEach(o => o.setMap(null));
+    _kkOverlays = [];
+    if (_kkPolyline) { _kkPolyline.setMap(null); _kkPolyline = null; }
+
+    const kakaoPoints = pts.map(e => new kakao.maps.LatLng(parseFloat(e.lat), parseFloat(e.lng)));
+
+    // ── numbered custom overlays ──
+    pts.forEach((ev, i) => {
+      const cls = i === 0 ? 'first' : i === pts.length - 1 ? 'last' : '';
+      const label = i === 0 ? '★' : String(i + 1);
+      const content = `<div class="kk-pin ${cls}">${label}</div>`;
+      const overlay = new kakao.maps.CustomOverlay({
+        position: kakaoPoints[i],
+        content,
+        yAnchor: 0.5,
+        xAnchor: 0.5,
+        zIndex: 3
+      });
+      overlay.setMap(_kkMap);
+      _kkOverlays.push(overlay);
+    });
+
+    // ── polyline ──
+    if (kakaoPoints.length > 1) {
+      _kkPolyline = new kakao.maps.Polyline({
+        path: kakaoPoints,
+        strokeWeight: 3,
+        strokeColor: '#3B6EF5',
+        strokeOpacity: 0.85,
+        strokeStyle: 'solid'
+      });
+      _kkPolyline.setMap(_kkMap);
+    }
+
+    // ── fit bounds ──
+    const bounds = new kakao.maps.LatLngBounds();
+    kakaoPoints.forEach(p => bounds.extend(p));
+    _kkMap.setBounds(bounds, 60, 60, 60, 60);
+
+    // ── trigger resize (map may have been hidden) ──
+    kakao.maps.event.trigger(_kkMap, 'resize');
+  });
+}
 
 // ── GOOGLE PLACES (New API — fetch only, no JS SDK) ──
 const GMAP_KEY='AIzaSyB63LfTOff_65UkNG1vMTZ3NKLaEqSNhc4';
