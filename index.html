@@ -2421,6 +2421,18 @@ window.openEditEvent=(eventId)=>{
 };
 window.saveEvent=async()=>{
   if(!EvCtx)return;
+  // ── מקום חובה ──
+  const latVal=document.getElementById('evLat').value;
+  const lngVal=document.getElementById('evLng').value;
+  if(!latVal||!lngVal){
+    const searchEl=document.getElementById('evPlaceSearch');
+    searchEl.focus();
+    searchEl.style.borderColor='var(--rose)';
+    searchEl.placeholder='חובה לבחור מקום מהרשימה';
+    setTimeout(()=>{searchEl.style.borderColor='';searchEl.placeholder='חפש מקום בקוריאה...';},2500);
+    showToast('יש לבחור מקום לפני השמירה');
+    return;
+  }
   const btn=document.getElementById('evSheetTitle');
   const evData={
     event_time:document.getElementById('evTime').value||'00:00',
