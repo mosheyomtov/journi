@@ -755,6 +755,61 @@ body {
 }
 .naver-btn:active { transform:scale(0.96); }
 
+/* ── Transport tabs ── */
+.transport-tabs {
+  margin-top: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+.tt-seg {
+  display: flex;
+  background: var(--surface-2);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+  margin-bottom: 10px;
+}
+.tt-tab {
+  flex: 1;
+  padding: 7px 4px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.tt-tab.active {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: var(--sh-sm);
+}
+.tt-panel { display: none; }
+.tt-panel.show { display: flex; align-items: center; gap: 10px; }
+.tt-duration {
+  flex: 1;
+  font-size: 12px;
+  color: var(--ink-3);
+  font-style: italic;
+}
+.tt-cta {
+  padding: 8px 14px;
+  border-radius: 9px;
+  border: none;
+  background: var(--brand);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s;
+}
+.tt-cta:active { background: var(--brand-dark); }
 .event-acts { display:flex; gap:7px; margin-top:12px; padding-top:12px; border-top:1px solid var(--border); }
 .ev-act {
   flex:1; padding:10px; border-radius:10px;
@@ -1936,6 +1991,29 @@ function renderSchedule(){
     const mapBtn=(evLat&&evLng)
       ?`<button class="gmaps-btn" style="margin-top:8px" onclick="event.stopPropagation();openGoogleMapsLink(${evLat},${evLng},'${evPlaceName.replace(/'/g,"\\'")}')">🗺️ Google Maps</button>`
       :'';
+    // Transport tabs — only for events with a preceding event on the same day
+    const hasPrev = i > 0;
+    const uid = ev.id.replace(/-/g,'').slice(0,8);
+    const transportTabs = (hasPrev && evLat && evLng) ? `
+      <div class="transport-tabs" onclick="event.stopPropagation()">
+        <div class="tt-seg">
+          <button class="tt-tab active" onclick="selTransTab(this,'${uid}','walk')">🚶‍♂️ הליכה</button>
+          <button class="tt-tab" onclick="selTransTab(this,'${uid}','transit')">🚌 תחב"צ</button>
+          <button class="tt-tab" onclick="selTransTab(this,'${uid}','car')">🚕 רכב</button>
+        </div>
+        <div class="tt-panel show" id="ttp-${uid}-walk">
+          <span class="tt-duration">מחשב זמן...</span>
+          <button class="tt-cta" onclick="navKakao('FOOT',${evLat},${evLng},'${evPlaceName.replace(/'/g,"\\'")}')">נווט רגלית ›</button>
+        </div>
+        <div class="tt-panel" id="ttp-${uid}-transit">
+          <span class="tt-duration">מחשב זמן...</span>
+          <button class="tt-cta" onclick="navKakao('PUBLICTRANSIT',${evLat},${evLng},'${evPlaceName.replace(/'/g,"\\'")}')">מסלול תחב"צ ›</button>
+        </div>
+        <div class="tt-panel" id="ttp-${uid}-car">
+          <span class="tt-duration">מחשב זמן...</span>
+          <button class="tt-cta" onclick="navKakao('CAR',${evLat},${evLng},'${evPlaceName.replace(/'/g,"\\'")}')">הזמן מונית / נווט ›</button>
+        </div>
+      </div>` : '';
     return`<div class="tl-item" style="animation-delay:${i*.04}s">
       <div class="tl-dot"></div>
       <div class="tl-card" onclick="toggleEv(this)">
@@ -1948,10 +2026,8 @@ function renderSchedule(){
         <div class="tl-tags"><span class="pill ${TAGS[evCat]?.p||'pill-sight'}">${TAGS[evCat]?.l||'📍 אטרקציה'}</span></div>
         <div class="tl-body">
           ${ev.description?`<div class="tl-desc">${ev.description}</div>`:''}
-          ${evTransport&&TRANSPORT_LABELS[evTransport]?`<div class="info-block ib-nav"><div class="info-lbl">🚗 איך מגיעים</div><div class="info-text">${TRANSPORT_LABELS[evTransport]}</div></div>`:''}
-          ${evWarn?`<div class="info-block ib-warn"><div class="info-lbl">⚠️ אזהרה</div><div class="info-text">${evWarn}</div></div>`:''}
-          ${evTip?`<div class="info-block ib-tip"><div class="info-lbl">💡 טיפ</div><div class="info-text">${evTip}</div></div>`:''}
           ${mapBtn}
+          ${transportTabs}
           <div class="event-acts">
             <button class="ev-act edit" onclick="event.stopPropagation();openEditEvent('${ev.id}')">✏️ ערוך</button>
             <button class="ev-act del" onclick="event.stopPropagation();delEvById('${ev.id}')">🗑️ מחק</button>
@@ -1962,6 +2038,27 @@ function renderSchedule(){
   }).join('');
 }
 window.toggleEv=el=>{el.classList.toggle('open');el.querySelector('.tl-body').classList.toggle('show');};
+
+window.selTransTab=function(btn,uid,mode){
+  const seg=btn.closest('.tt-seg');
+  seg.querySelectorAll('.tt-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  const panels=btn.closest('.transport-tabs').querySelectorAll('.tt-panel');
+  panels.forEach(p=>p.classList.remove('show'));
+  const target=document.getElementById('ttp-'+uid+'-'+mode);
+  if(target)target.classList.add('show');
+};
+
+window.navKakao=function(mode,lat,lng,name){
+  const appUri=`kakaomap://route?ep=${lat},${lng}&by=${mode}`;
+  const webUri=`https://map.kakao.com/link/to/${encodeURIComponent(name)},${lat},${lng}`;
+  // Fallback timer — cancelled if app opens (page loses focus)
+  const t=setTimeout(()=>window.open(webUri,'_blank'),1500);
+  const cancel=()=>{clearTimeout(t);};
+  window.addEventListener('blur',cancel,{once:true});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)cancel();},{once:true});
+  window.location.href=appUri;
+};
 
 // ── EVENTS ──
 window._prevScreen='trip';
