@@ -62,8 +62,12 @@ serve(async (req) => {
       const walkMin = (straightM * 1.25) / 4500 * 60;
       walking = fmt(walkMin);
 
-      // ── Transit: best path from ODsay (sorted by totalTime) ──
-      const totalMin: number | undefined = result?.path?.[0]?.info?.totalTime;
+      // ── Transit: prefer subway (pathType=1), else best by totalTime ──
+      const paths: any[] = result?.path ?? [];
+      // pathType 1=subway, 2=bus, 3=mixed; prefer subway for reliability
+      const subwayPath = paths.find((p: any) => p.pathType === 1);
+      const bestPath = subwayPath ?? paths[0];
+      const totalMin: number | undefined = bestPath?.info?.totalTime;
       if (totalMin != null && typeof totalMin === "number") {
         transit = fmt(totalMin);
       } else {
