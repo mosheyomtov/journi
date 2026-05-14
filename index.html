@@ -585,8 +585,10 @@ body {
 }
 #dayMap {
   width: 100%; height: 100%;
-  /* Muted, pastel-luxury look — reduces Kakao's saturated yellows/blues */
-  filter: grayscale(20%) brightness(106%) contrast(88%) saturate(85%);
+  /* Neutralize Kakao's yellow roads.
+     grayscale(50%) kills most color. sepia(15%) warms to stone/cream.
+     brightness/contrast polish the final look. */
+  filter: grayscale(50%) sepia(15%) brightness(107%) contrast(85%);
 }
 
 /* app-bar floats over the map */
@@ -2549,8 +2551,8 @@ function _initKakaoMap() {
   // only the base tile is shown (no addMapType calls)
 }
 
-// Elegant muted palette — works well on the filtered map
-const _MODE_COLOR  = { walk: '#3D9970', transit: '#6C5CE7', car: '#2D3436' };
+// Single brand blue for all modes
+const _MODE_COLOR  = { walk: '#3B6EF5', transit: '#3B6EF5', car: '#3B6EF5' };
 const _MODE_WEIGHT = { walk: 3,         transit: 3,          car: 3         };
 
 // Draws the day route map.
