@@ -756,6 +756,7 @@ body {
 .naver-btn:active { transform:scale(0.96); }
 
 /* ── Transport tabs ── */
+/* ── Transport tabs ── */
 .transport-tabs {
   margin-top: 12px;
   border-top: 1px solid var(--border);
@@ -771,11 +772,11 @@ body {
 }
 .tt-tab {
   flex: 1;
-  padding: 7px 4px;
+  padding: 7px 2px;
   border: none;
   background: transparent;
   border-radius: 8px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   font-family: 'Inter', sans-serif;
   color: var(--ink-3);
@@ -789,27 +790,35 @@ body {
   box-shadow: var(--sh-sm);
 }
 .tt-panel { display: none; }
-.tt-panel.show { display: flex; align-items: center; gap: 10px; }
+.tt-panel.show { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
 .tt-duration {
   flex: 1;
   font-size: 12px;
   color: var(--ink-3);
   font-style: italic;
 }
-.tt-cta {
-  padding: 8px 14px;
-  border-radius: 9px;
-  border: none;
-  background: var(--brand);
-  color: #fff;
+/* App nav buttons */
+.nav-app-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: #fff;
+  cursor: pointer;
   font-size: 12px;
   font-weight: 600;
   font-family: 'Inter', sans-serif;
-  cursor: pointer;
+  color: var(--ink);
+  transition: box-shadow .15s, transform .1s;
   white-space: nowrap;
-  transition: background .15s;
 }
-.tt-cta:active { background: var(--brand-dark); }
+.nav-app-btn:active { transform: scale(0.97); box-shadow: var(--sh-sm); }
+.nav-app-btn svg { flex-shrink: 0; }
+/* Taxi panel: two buttons side by side */
+.tt-taxi-row { display: flex; gap: 8px; width: 100%; }
+.tt-taxi-row .nav-app-btn { flex: 1; justify-content: center; }
 .event-acts { display:flex; gap:7px; margin-top:12px; padding-top:12px; border-top:1px solid var(--border); }
 .ev-act {
   flex:1; padding:10px; border-radius:10px;
@@ -1994,24 +2003,34 @@ function renderSchedule(){
     // Transport tabs — only for events with a preceding event on the same day
     const hasPrev = i > 0;
     const uid = ev.id.replace(/-/g,'').slice(0,8);
+    const eSafeName = evPlaceName.replace(/'/g,"\\'");
+    // SVG logos
+    const naverSvg=`<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect width="18" height="18" rx="4" fill="#03C75A"/><path d="M3.5 13.5V4.5H6.3L9.9 10V4.5H14.5V13.5H11.7L8.1 8V13.5H3.5Z" fill="white"/></svg>`;
+    const uberSvg=`<svg width="38" height="18" viewBox="0 0 38 18" fill="none"><rect width="38" height="18" rx="4" fill="#000"/><text x="19" y="13" text-anchor="middle" fill="white" font-size="10" font-weight="700" font-family="Arial,sans-serif" letter-spacing="0.5">UBER</text></svg>`;
     const transportTabs = (hasPrev && evLat && evLng) ? `
       <div class="transport-tabs" onclick="event.stopPropagation()">
         <div class="tt-seg">
           <button class="tt-tab active" onclick="selTransTab(this,'${uid}','walk')">🚶‍♂️ הליכה</button>
           <button class="tt-tab" onclick="selTransTab(this,'${uid}','transit')">🚌 תחב"צ</button>
-          <button class="tt-tab" onclick="selTransTab(this,'${uid}','car')">🚕 רכב</button>
+          <button class="tt-tab" onclick="selTransTab(this,'${uid}','car')">🚗 רכב</button>
+          <button class="tt-tab" onclick="selTransTab(this,'${uid}','taxi')">🚕 מונית</button>
         </div>
         <div class="tt-panel show" id="ttp-${uid}-walk">
-          <span class="tt-duration">מחשב זמן...</span>
-          <button class="tt-cta" onclick="navKakao('FOOT',${evLat},${evLng},'${evPlaceName.replace(/'/g,"\\'")}')">נווט רגלית ›</button>
+          <span class="tt-duration">~זמן הליכה</span>
+          <button class="nav-app-btn" onclick="navNaver('walk',${evLat},${evLng},'${eSafeName}')">${naverSvg}נווט רגלית</button>
         </div>
         <div class="tt-panel" id="ttp-${uid}-transit">
-          <span class="tt-duration">מחשב זמן...</span>
-          <button class="tt-cta" onclick="navKakao('PUBLICTRANSIT',${evLat},${evLng},'${evPlaceName.replace(/'/g,"\\'")}')">מסלול תחב"צ ›</button>
+          <span class="tt-duration">~זמן נסיעה</span>
+          <button class="nav-app-btn" onclick="navNaver('public',${evLat},${evLng},'${eSafeName}')">${naverSvg}מסלול תחב"צ</button>
         </div>
         <div class="tt-panel" id="ttp-${uid}-car">
-          <span class="tt-duration">מחשב זמן...</span>
-          <button class="tt-cta" onclick="navKakao('CAR',${evLat},${evLng},'${evPlaceName.replace(/'/g,"\\'")}')">הזמן מונית / נווט ›</button>
+          <span class="tt-duration">~זמן נסיעה</span>
+          <button class="nav-app-btn" onclick="navNaver('car',${evLat},${evLng},'${eSafeName}')">${naverSvg}נווט ברכב</button>
+        </div>
+        <div class="tt-panel" id="ttp-${uid}-taxi">
+          <div class="tt-taxi-row">
+            <button class="nav-app-btn" onclick="navUber(${evLat},${evLng},'${eSafeName}')">${uberSvg}</button>
+          </div>
         </div>
       </div>` : '';
     return`<div class="tl-item" style="animation-delay:${i*.04}s">
@@ -2049,15 +2068,27 @@ window.selTransTab=function(btn,uid,mode){
   if(target)target.classList.add('show');
 };
 
-window.navKakao=function(mode,lat,lng,name){
-  const appUri=`kakaomap://route?ep=${lat},${lng}&by=${mode}`;
-  const webUri=`https://map.kakao.com/link/to/${encodeURIComponent(name)},${lat},${lng}`;
-  // Fallback timer — cancelled if app opens (page loses focus)
+function _deepLink(appUri,webUri){
   const t=setTimeout(()=>window.open(webUri,'_blank'),1500);
-  const cancel=()=>{clearTimeout(t);};
+  const cancel=()=>clearTimeout(t);
   window.addEventListener('blur',cancel,{once:true});
   document.addEventListener('visibilitychange',()=>{if(document.hidden)cancel();},{once:true});
   window.location.href=appUri;
+}
+
+window.navNaver=function(mode,lat,lng,name){
+  // mode: 'walk' | 'car' | 'public'
+  const enc=encodeURIComponent(name);
+  const appUri=`nmap://route/${mode}?dlat=${lat}&dlng=${lng}&dname=${enc}&appname=journi`;
+  const webUri=`https://map.naver.com/v5/directions/-/-/-/${mode}?c=${lng},${lat},15,0,0,0,dh`;
+  _deepLink(appUri,webUri);
+};
+
+window.navUber=function(lat,lng,name){
+  const enc=encodeURIComponent(name);
+  const appUri=`uber://?action=setPickup&pickup=my_location&dropoff[latitude]=${lat}&dropoff[longitude]=${lng}&dropoff[nickname]=${enc}`;
+  const webUri=`https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${lat}&dropoff[longitude]=${lng}&dropoff[nickname]=${enc}`;
+  _deepLink(appUri,webUri);
 };
 
 // ── EVENTS ──
