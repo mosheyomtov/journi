@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const KAKAO_KEY = Deno.env.get("KAKAO_API_KEY")!;
+const KAKAO_KEY  = Deno.env.get("KAKAO_API_KEY")!;
+const ODSAY_KEY  = Deno.env.get("ODSAY_API_KEY")!;
+const REFERER    = "https://mosheyomtov.github.io";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -21,7 +23,7 @@ serve(async (req) => {
   try {
     const { origin, destination } = await req.json();
 
-    // ── Kakao Mobility: car route (duration + actual road distance) ──
+    // ── 1. Kakao Mobility → driving time + real road distance ──
     const kakaoRes = await fetch(
       `https://apis-navi.kakaomobility.com/v1/directions` +
         `?origin=${origin.lng},${origin.lat}` +
@@ -31,36 +33,47 @@ serve(async (req) => {
     );
     const kakaoData = await kakaoRes.json();
     const summary = kakaoData?.routes?.[0]?.summary;
+    if (!summary) throw new Error(`Kakao no route: ${JSON.stringify(kakaoData)}`);
 
-    if (!summary) {
-      // Kakao returned no route (e.g. water, restricted area) — return error
-      throw new Error(`Kakao no route: ${JSON.stringify(kakaoData)}`);
-    }
-
-    // duration in seconds, distance in meters
     const drivingSecs: number = summary.duration;
-    const roadMeters: number = summary.distance;   // actual road distance
-    const roadKm = roadMeters / 1000;
+    const roadKm: number = summary.distance / 1000;
 
-    // ── Driving ──
     const driving = fmt(drivingSecs / 60);
+    const walking = fmt(roadKm / 4 * 60); // road distance ÷ 4 km/h
 
-    // ── Walking: road distance / 4 km/h (real path, not straight line) ──
-    const walking = fmt(roadKm / 4 * 60);
+    // ── 2. ODsay → real transit time ──
+    let transit: string;
+    try {
+      const odsayUrl =
+        `https://api.odsay.com/v1/api/searchPubTransPathT` +
+        `?SX=${origin.lng}&SY=${origin.lat}` +
+        `&EX=${destination.lng}&EY=${destination.lat}` +
+        `&apiKey=${encodeURIComponent(ODSAY_KEY)}`;
 
-    // ── Transit: Seoul subway model
-    //   < 2 km  → likely walking or 1-2 stops → 4–10 min overhead + slow (15 km/h)
-    //   2-10 km → subway + walk to/from station (avg 30 km/h + 8 min overhead)
-    //   > 10 km → express subway (avg 40 km/h + 10 min overhead)
-    let transitMin: number;
-    if (roadKm < 2) {
-      transitMin = roadKm / 15 * 60 + 5;
-    } else if (roadKm < 10) {
-      transitMin = roadKm / 30 * 60 + 8;
-    } else {
-      transitMin = roadKm / 40 * 60 + 10;
+      const odsayRes = await fetch(odsayUrl, {
+        headers: { Referer: REFERER },
+      });
+      const odsayData = await odsayRes.json();
+
+      // ODsay returns paths sorted by totalTime (minutes)
+      const totalMin: number | undefined =
+        odsayData?.result?.path?.[0]?.info?.totalTime;
+
+      if (totalMin != null && typeof totalMin === "number") {
+        transit = fmt(totalMin);
+      } else {
+        // No transit route found (e.g. too close, or no service)
+        transit = "אין קו ישיר";
+        console.warn("ODsay no path:", JSON.stringify(odsayData));
+      }
+    } catch (e) {
+      console.error("ODsay error:", e);
+      // Fallback to distance-based estimate
+      const fallbackMin = roadKm < 2 ? roadKm / 15 * 60 + 5
+        : roadKm < 10 ? roadKm / 30 * 60 + 8
+        : roadKm / 40 * 60 + 10;
+      transit = fmt(fallbackMin) + "*";
     }
-    const transit = fmt(transitMin);
 
     return new Response(JSON.stringify({ walking, transit, driving }), {
       headers: { ...CORS, "Content-Type": "application/json" },
