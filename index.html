@@ -2055,6 +2055,8 @@ function renderSchedule(){
       </div>
     </div>`;
   }).join('');
+  // kick off route-time calculations for consecutive events
+  loadRouteTimesForDay(dayEvs);
 }
 window.toggleEv=el=>{el.classList.toggle('open');el.querySelector('.tl-body').classList.toggle('show');};
 
@@ -2067,6 +2069,66 @@ window.selTransTab=function(btn,uid,mode){
   const target=document.getElementById('ttp-'+uid+'-'+mode);
   if(target)target.classList.add('show');
 };
+
+// ── ROUTE TIME CALCULATION ──
+
+/**
+ * Mock implementation — replace body with real API call when backend is ready.
+ * Returns { walking, transit, driving } as human-readable strings (e.g. "18 דק'").
+ */
+async function calculateRouteTimes(origin, destination){
+  // Simulate network latency
+  await new Promise(r=>setTimeout(r,900+Math.random()*400));
+
+  // Haversine distance (km)
+  const toRad=d=>d*Math.PI/180;
+  const dLat=toRad(destination.lat-origin.lat);
+  const dLng=toRad(destination.lng-origin.lng);
+  const a=Math.sin(dLat/2)**2
+    +Math.cos(toRad(origin.lat))*Math.cos(toRad(destination.lat))*Math.sin(dLng/2)**2;
+  const dist=6371*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+
+  const fmt=min=>{
+    if(min<1)return`< 1 דק'`;
+    if(min<60)return`${Math.round(min)} דק'`;
+    return`${Math.floor(min/60)}ש' ${Math.round(min%60)}דק'`;
+  };
+
+  return{
+    walking: fmt(dist/5*60),          // 5 km/h
+    transit: fmt(dist/28*60+6),        // 28 km/h avg + 6 min wait
+    driving: fmt(dist/32*60+3),        // 32 km/h urban + 3 min
+  };
+}
+
+/**
+ * Builds the journeys array for the day and updates each event's transport panels.
+ * journeys[i] = { origin:{lat,lng}, destination:{lat,lng}, uid }
+ */
+async function loadRouteTimesForDay(dayEvs){
+  for(let i=1;i<dayEvs.length;i++){
+    const prev=dayEvs[i-1], curr=dayEvs[i];
+    if(!prev.lat||!prev.lng||!curr.lat||!curr.lng)continue;
+    const uid=curr.id.replace(/-/g,'').slice(0,8);
+    const origin={lat:parseFloat(prev.lat),lng:parseFloat(prev.lng)};
+    const destination={lat:parseFloat(curr.lat),lng:parseFloat(curr.lng)};
+    // Show spinner while calculating
+    _setDurations(uid,{walking:'⏳',transit:'⏳',driving:'⏳'});
+    // calculateRouteTimes — swap this call for real API later
+    const times=await calculateRouteTimes(origin,destination);
+    _setDurations(uid,times);
+  }
+}
+
+function _setDurations(uid,{walking,transit,driving}){
+  const set=(panelId,text)=>{
+    const el=document.getElementById(panelId);
+    if(el)el.querySelector('.tt-duration').textContent=text;
+  };
+  set(`ttp-${uid}-walk`, walking);
+  set(`ttp-${uid}-transit`, transit);
+  set(`ttp-${uid}-car`, driving);
+}
 
 function _deepLink(appUri,webUri){
   const t=setTimeout(()=>window.open(webUri,'_blank'),1500);
