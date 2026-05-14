@@ -583,7 +583,11 @@ body {
   background: #e8eaf0;
   overflow: hidden;
 }
-#dayMap { width: 100%; height: 100%; }
+#dayMap {
+  width: 100%; height: 100%;
+  /* Muted, pastel-luxury look — reduces Kakao's saturated yellows/blues */
+  filter: grayscale(20%) brightness(106%) contrast(88%) saturate(85%);
+}
 
 /* app-bar floats over the map */
 #screen-trip .app-bar {
@@ -643,19 +647,30 @@ body {
   align-items: center; justify-content: center;
   gap: 6px; color: var(--ink-3); font-size: 13px;
 }
-/* Kakao custom numbered pin */
+/* Kakao custom pin — Journi branded, minimal */
 .kk-pin {
-  width: 30px; height: 30px; border-radius: 50%;
-  background: var(--brand); color: #fff;
+  width: 28px; height: 28px; border-radius: 50%;
+  background: #fff;
+  color: #1a1a2e;
   display: flex; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 700;
-  border: 2.5px solid #fff;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.28);
+  font-size: 11px; font-weight: 800;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: -0.3px;
+  border: 2px solid #1a1a2e;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.22);
   cursor: pointer;
   transform: translate(-50%, -50%);
+  transition: transform .15s;
 }
-.kk-pin.first { background: var(--green); }
-.kk-pin.last  { background: var(--rose); }
+.kk-pin.first {
+  background: #1a1a2e; color: #fff;
+  width: 32px; height: 32px; font-size: 13px;
+  border-color: #1a1a2e;
+}
+.kk-pin.last {
+  background: #fff; color: #1a1a2e;
+  border-color: #1a1a2e; opacity: 0.7;
+}
 
 .trip-header-section {
   background: #fff;
@@ -2152,7 +2167,7 @@ function renderSchedule(){
   // Build HTML: ev card, then connector to next event
   body.innerHTML = dayEvs.map((ev, i) => {
     const evTitle = ev.title||ev.name||'—';
-    const evTime  = ev.event_time||ev.time||'--:--';
+    const evTime  = (ev.event_time||ev.time||'--:--').slice(0,5);
     const evCat   = ev.category||ev.tag||'sight';
     const evLat   = ev.lat||'';
     const evLng   = ev.lng||'';
@@ -2520,15 +2535,23 @@ function _loadKakaoMaps(cb) {
 function _initKakaoMap() {
   const el = document.getElementById('dayMap');
   if (!el || !window.kakao?.maps) return;
-  if (_kkMap) return; // already initialized
+  if (_kkMap) return;
   _kkMap = new kakao.maps.Map(el, {
-    center: new kakao.maps.LatLng(36.5, 127.5), // Korea center
-    level: 7
+    center: new kakao.maps.LatLng(36.5, 127.5),
+    level: 7,
+    disableDoubleClickZoom: false,
+    draggable: true,
+    scrollwheel: true,
+    // Disable default Kakao map controls for a cleaner look
+    mapTypeId: kakao.maps.MapTypeId?.ROADMAP
   });
+  // Hide default POI overlays and traffic info by ensuring
+  // only the base tile is shown (no addMapType calls)
 }
 
-const _MODE_COLOR  = { walk: '#22C55E', transit: '#8B5CF6', car: '#3B6EF5' };
-const _MODE_WEIGHT = { walk: 3,         transit: 4,         car: 4         };
+// Elegant muted palette — works well on the filtered map
+const _MODE_COLOR  = { walk: '#3D9970', transit: '#6C5CE7', car: '#2D3436' };
+const _MODE_WEIGHT = { walk: 3,         transit: 3,          car: 3         };
 
 // Draws the day route map.
 // Looks up road geometry from _segData[uid].drivingPath — no index mismatch
@@ -2595,7 +2618,7 @@ function renderKakaoRoute(dayEvs) {
         path,
         strokeWeight:  weight,
         strokeColor:   color,
-        strokeOpacity: 0.9,
+        strokeOpacity: 0.75,
         strokeStyle:   'solid'
       });
       line.setMap(_kkMap);
