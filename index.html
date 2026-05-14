@@ -1980,7 +1980,7 @@ const TAGS={
 function renderSchedule(){
   const curDay=CTrip.days?.find(d=>d.day_index===CDayIdx);
   const dayEvs=curDay?(CTrip.events||[]).filter(e=>e.day_id===curDay.id):[];
-  dayEvs.sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+  dayEvs.sort((a,b)=>(a.event_time||a.time||'').localeCompare(b.event_time||b.time||''));
   const body=document.getElementById('tlBody');
   document.getElementById('addEvBtn').onclick=()=>openAddEvent(CDayIdx);
   if(!dayEvs.length){
@@ -2077,14 +2077,11 @@ window.selTransTab=function(btn,uid,mode){
  * The Kakao API key lives only on the server — never exposed to the browser.
  */
 async function calculateRouteTimes(origin, destination){
-  const FN_URL='https://dzbxnwmwvwqyhergwefh.supabase.co/functions/v1/route-times';
-  const res=await fetch(FN_URL,{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({origin,destination})
+  const{data,error}=await sb.functions.invoke('route-times',{
+    body:{origin,destination}
   });
-  if(!res.ok)throw new Error('route-times error '+res.status);
-  return res.json(); // { walking, transit, driving }
+  if(error)throw error;
+  return data; // { walking, transit, driving }
 }
 
 /**
@@ -2098,11 +2095,14 @@ async function loadRouteTimesForDay(dayEvs){
     const uid=curr.id.replace(/-/g,'').slice(0,8);
     const origin={lat:parseFloat(prev.lat),lng:parseFloat(prev.lng)};
     const destination={lat:parseFloat(curr.lat),lng:parseFloat(curr.lng)};
-    // Show spinner while calculating
     _setDurations(uid,{walking:'⏳',transit:'⏳',driving:'⏳'});
-    // calculateRouteTimes — swap this call for real API later
-    const times=await calculateRouteTimes(origin,destination);
-    _setDurations(uid,times);
+    try{
+      const times=await calculateRouteTimes(origin,destination);
+      _setDurations(uid,times);
+    }catch(e){
+      console.error('[route-times] error for uid',uid,e);
+      _setDurations(uid,{walking:'—',transit:'—',driving:'—'});
+    }
   }
 }
 
