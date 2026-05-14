@@ -39,10 +39,10 @@ serve(async (req) => {
     const roadKm: number = summary.distance / 1000;
 
     const driving = fmt(drivingSecs / 60);
-    const walking = fmt(roadKm / 4 * 60); // road distance ÷ 4 km/h
 
-    // ── 2. ODsay → real transit time ──
+    // ── 2. ODsay → real transit time + pointDistance for walking ──
     let transit: string;
+    let walking: string;
     try {
       const odsayUrl =
         `https://api.odsay.com/v1/api/searchPubTransPathT` +
@@ -54,25 +54,30 @@ serve(async (req) => {
         headers: { Referer: REFERER },
       });
       const odsayData = await odsayRes.json();
+      const result = odsayData?.result;
 
-      // ODsay returns paths sorted by totalTime (minutes)
-      const totalMin: number | undefined =
-        odsayData?.result?.path?.[0]?.info?.totalTime;
+      // ── Walking: pointDistance (straight-line meters) × 1.25 city-block factor ÷ 4.5 km/h
+      // pointDistance is more accurate than car road distance for pedestrian routing
+      const straightM: number = result?.pointDistance ?? (roadKm * 1000 * 0.75);
+      const walkMin = (straightM * 1.25) / 4500 * 60;
+      walking = fmt(walkMin);
 
+      // ── Transit: best path from ODsay (sorted by totalTime) ──
+      const totalMin: number | undefined = result?.path?.[0]?.info?.totalTime;
       if (totalMin != null && typeof totalMin === "number") {
         transit = fmt(totalMin);
       } else {
-        // No transit route found (e.g. too close, or no service)
         transit = "אין קו ישיר";
-        console.warn("ODsay no path:", JSON.stringify(odsayData));
+        console.warn("ODsay no path:", JSON.stringify(odsayData).slice(0, 200));
       }
     } catch (e) {
       console.error("ODsay error:", e);
-      // Fallback to distance-based estimate
-      const fallbackMin = roadKm < 2 ? roadKm / 15 * 60 + 5
+      // Fallback: haversine-based estimates
+      walking = fmt(roadKm * 0.75 / 4.5 * 60) + "*";
+      const fb = roadKm < 2 ? roadKm / 15 * 60 + 5
         : roadKm < 10 ? roadKm / 30 * 60 + 8
         : roadKm / 40 * 60 + 10;
-      transit = fmt(fallbackMin) + "*";
+      transit = fmt(fb) + "*";
     }
 
     return new Response(JSON.stringify({ walking, transit, driving }), {
