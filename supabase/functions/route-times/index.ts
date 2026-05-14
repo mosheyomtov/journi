@@ -37,8 +37,19 @@ serve(async (req) => {
 
     const drivingSecs: number = summary.duration;
     const roadKm: number = summary.distance / 1000;
-
     const driving = fmt(drivingSecs / 60);
+
+    // ── Extract road geometry (vertexes = [lng,lat,lng,lat,...]) ──
+    const drivingPath: {lat: number; lng: number}[] = [];
+    const sections: any[] = kakaoData?.routes?.[0]?.sections ?? [];
+    for (const section of sections) {
+      for (const road of section.roads ?? []) {
+        const v: number[] = road.vertexes ?? [];
+        for (let i = 0; i < v.length - 1; i += 2) {
+          drivingPath.push({ lng: v[i], lat: v[i + 1] });
+        }
+      }
+    }
 
     // ── 2. ODsay → real transit time + pointDistance for walking ──
     let transit: string;
@@ -88,7 +99,7 @@ serve(async (req) => {
       transit = fmt(fb) + "*";
     }
 
-    return new Response(JSON.stringify({ walking, transit, driving }), {
+    return new Response(JSON.stringify({ walking, transit, driving, drivingPath }), {
       headers: { ...CORS, "Content-Type": "application/json" },
     });
   } catch (e) {

@@ -572,15 +572,71 @@ body {
 ═══════════════════════════════ */
 #screen-trip { background: var(--bg); }
 
-/* ── Kakao day map ── */
+/* ── Kakao day map — top of trip screen ── */
+#screen-trip { flex-direction: column; }
+
 #dayMapWrap {
   position: relative;
   width: 100%;
-  height: 240px;
-  background: var(--surface-3);
+  height: 260px;
+  flex-shrink: 0;
+  background: #e8eaf0;
   overflow: hidden;
 }
 #dayMap { width: 100%; height: 100%; }
+
+/* app-bar floats over the map */
+#screen-trip .app-bar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 20;
+  background: transparent;
+  border: none;
+  padding: 14px 16px;
+}
+#screen-trip .app-bar .back-btn {
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(8px);
+  border-radius: 20px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: var(--sh-sm);
+  border: 1px solid rgba(255,255,255,0.6);
+}
+#screen-trip .app-bar .qa-btn {
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(8px);
+  border-radius: 20px;
+  box-shadow: var(--sh-sm);
+  border: 1px solid rgba(255,255,255,0.6);
+}
+
+/* trip name overlay at bottom of map */
+#mapTripLabel {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  z-index: 10;
+  padding: 24px 16px 10px;
+  background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.45));
+  color: #fff;
+  display: flex; align-items: flex-end; justify-content: space-between;
+}
+#mapTripLabel .ml-name {
+  font-size: 17px; font-weight: 700;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  display: flex; align-items: center; gap: 8px;
+}
+#mapTripLabel .ml-actions { display: flex; gap: 8px; }
+#mapTripLabel .ml-btn {
+  background: rgba(255,255,255,0.2);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,0.35);
+  color: #fff; border-radius: 16px;
+  padding: 5px 12px; font-size: 12px; font-weight: 600;
+  cursor: pointer;
+}
+
 .day-map-empty {
   position: absolute; inset: 0;
   display: flex; flex-direction: column;
@@ -1429,24 +1485,35 @@ body {
 
 <!-- ════════ TRIP DETAIL ════════ -->
 <div class="screen" id="screen-trip">
-  <div class="app-bar">
-    <button class="back-btn" onclick="showScreen('home')">← הטיולים</button>
-    <div id="tripBarActions" style="display:flex;gap:8px">
-      <button class="qa-btn" onclick="doShareBtn()" style="flex:none;padding:8px 12px;font-size:12px">📤</button>
-    </div>
-  </div>
 
-  <div class="trip-header-section">
-    <div class="trip-hero-card">
-      <span class="trip-emoji-lg" id="tdEmoji">✈️</span>
-      <div class="trip-name-lg" id="tdName">—</div>
-      <div class="trip-dest-lg"><span>📍</span><span id="tdDest">—</span></div>
-      <div class="trip-dates-lg" id="tdDates">—</div>
+  <!-- MAP — top of screen, app-bar floats over it -->
+  <div id="dayMapWrap">
+    <div class="app-bar">
+      <button class="back-btn" onclick="showScreen('home')">← הטיולים</button>
+      <div id="tripBarActions" style="display:flex;gap:8px">
+        <button class="qa-btn" onclick="doShareBtn()" style="padding:8px 12px;font-size:12px">📤</button>
+      </div>
     </div>
-    <div class="trip-quick-actions">
-      <button class="qa-btn primary" onclick="doShareBtn()">📤 שתף</button>
-      <button class="qa-btn" onclick="editTrip()">✏️ ערוך</button>
-      <button class="qa-btn danger" onclick="deleteTrip()">🗑️</button>
+    <div id="dayMap"></div>
+    <div class="day-map-empty" id="dayMapEmpty" style="display:none">
+      <span style="font-size:32px">🗺️</span>
+      <span>הוסף אירועים עם מיקום כדי לראות את המסלול</span>
+    </div>
+    <div id="mapTripLabel">
+      <div>
+        <div class="ml-name">
+          <span id="tdEmoji">✈️</span>
+          <span id="tdName">—</span>
+        </div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.8);margin-top:2px;text-shadow:0 1px 3px rgba(0,0,0,0.4)">
+          <span id="tdDest"></span>
+          <span id="tdDates" style="margin-right:6px;opacity:0.85"></span>
+        </div>
+      </div>
+      <div class="ml-actions">
+        <button class="ml-btn" onclick="editTrip()">✏️ ערוך</button>
+        <button class="ml-btn danger" onclick="deleteTrip()" style="background:rgba(244,63,94,0.3);border-color:rgba(244,63,94,0.4)">🗑️</button>
+      </div>
     </div>
   </div>
 
@@ -1459,13 +1526,6 @@ body {
   <div style="overflow-y:auto;flex:1">
     <!-- SCHEDULE -->
     <div class="tab-pane active" id="tab-schedule">
-      <div id="dayMapWrap">
-        <div id="dayMap"></div>
-        <div class="day-map-empty" id="dayMapEmpty" style="display:none">
-          <span style="font-size:28px">🗺️</span>
-          <span>הוסף אירועים עם מיקום כדי לראות את המסלול</span>
-        </div>
-      </div>
       <div class="day-pills" id="dayPills"></div>
       <div class="timeline" id="tlBody"></div>
       <button class="add-event-btn" id="addEvBtn" onclick="openAddEvent(window._CDayIdx||0)">+ הוסף אירוע ליום</button>
@@ -2092,9 +2152,9 @@ function renderSchedule(){
       </div>
     </div>`;
   }).join('');
-  // ── Kakao day route map ──
+  // Show markers immediately (straight lines), then loadRouteTimesForDay
+  // redraws with real road geometry once API calls complete
   renderKakaoRoute(dayEvs);
-  // kick off route-time calculations for consecutive events
   loadRouteTimesForDay(dayEvs);
 }
 window.toggleEv=el=>{el.classList.toggle('open');el.querySelector('.tl-body').classList.toggle('show');};
@@ -2128,6 +2188,9 @@ async function calculateRouteTimes(origin, destination){
  * journeys[i] = { origin:{lat,lng}, destination:{lat,lng}, uid }
  */
 async function loadRouteTimesForDay(dayEvs){
+  // segmentPaths[i] = drivingPath for segment i→i+1, null if no data
+  const segmentPaths = new Array(Math.max(0, dayEvs.length - 1)).fill(null);
+
   for(let i=1;i<dayEvs.length;i++){
     const prev=dayEvs[i-1], curr=dayEvs[i];
     if(!prev.lat||!prev.lng||!curr.lat||!curr.lng)continue;
@@ -2136,13 +2199,16 @@ async function loadRouteTimesForDay(dayEvs){
     const destination={lat:parseFloat(curr.lat),lng:parseFloat(curr.lng)};
     _setDurations(uid,{walking:'⏳',transit:'⏳',driving:'⏳'});
     try{
-      const times=await calculateRouteTimes(origin,destination);
-      _setDurations(uid,times);
+      const data=await calculateRouteTimes(origin,destination);
+      _setDurations(uid,data);
+      if(data.drivingPath?.length) segmentPaths[i-1]=data.drivingPath;
     }catch(e){
       console.error('[route-times] error for uid',uid,e);
       _setDurations(uid,{walking:'—',transit:'—',driving:'—'});
     }
   }
+  // Redraw map with real road geometry
+  renderKakaoRoute(dayEvs, segmentPaths);
 }
 
 function _setDurations(uid,{walking,transit,driving}){
@@ -2286,8 +2352,8 @@ window.delEvById=async(evId)=>{
 const KAKAO_JS_KEY = '546de53c306a839dfeb7702be1bfe856';
 let _kkLoading = false, _kkReady = false;
 let _kkMap = null;
-let _kkOverlays = [];   // CustomOverlay markers
-let _kkPolyline = null; // route line
+let _kkOverlays  = [];  // CustomOverlay markers
+let _kkPolylines = [];  // one Polyline per segment
 
 function _loadKakaoMaps(cb) {
   if (_kkReady) { cb && cb(); return; }
@@ -2317,10 +2383,10 @@ function _initKakaoMap() {
   });
 }
 
-function renderKakaoRoute(dayEvs) {
+// segmentPaths: array of [{lat,lng}] per segment — null = use straight line
+function renderKakaoRoute(dayEvs, segmentPaths = []) {
   const pts = dayEvs.filter(e => e.lat && e.lng);
   const emptyEl = document.getElementById('dayMapEmpty');
-  const wrapEl  = document.getElementById('dayMapWrap');
 
   if (!pts.length) {
     if (emptyEl) emptyEl.style.display = 'flex';
@@ -2332,10 +2398,11 @@ function renderKakaoRoute(dayEvs) {
     _initKakaoMap();
     if (!_kkMap) return;
 
-    // ── clear previous overlays & polyline ──
+    // ── clear previous overlays & polylines ──
     _kkOverlays.forEach(o => o.setMap(null));
     _kkOverlays = [];
-    if (_kkPolyline) { _kkPolyline.setMap(null); _kkPolyline = null; }
+    if (_kkPolylines) _kkPolylines.forEach(p => p.setMap(null));
+    _kkPolylines = [];
 
     const kakaoPoints = pts.map(e => new kakao.maps.LatLng(parseFloat(e.lat), parseFloat(e.lng)));
 
@@ -2346,31 +2413,38 @@ function renderKakaoRoute(dayEvs) {
       const content = `<div class="kk-pin ${cls}">${label}</div>`;
       const overlay = new kakao.maps.CustomOverlay({
         position: kakaoPoints[i],
-        content,
-        yAnchor: 0.5,
-        xAnchor: 0.5,
-        zIndex: 3
+        content, yAnchor: 0.5, xAnchor: 0.5, zIndex: 3
       });
       overlay.setMap(_kkMap);
       _kkOverlays.push(overlay);
     });
 
-    // ── polyline ──
-    if (kakaoPoints.length > 1) {
-      _kkPolyline = new kakao.maps.Polyline({
-        path: kakaoPoints,
-        strokeWeight: 3,
+    // ── polylines per segment (real road or straight fallback) ──
+    for (let i = 0; i < kakaoPoints.length - 1; i++) {
+      const roadPath = segmentPaths[i];
+      const path = roadPath && roadPath.length > 1
+        ? roadPath.map(p => new kakao.maps.LatLng(p.lat, p.lng))
+        : [kakaoPoints[i], kakaoPoints[i + 1]]; // straight-line fallback
+
+      const line = new kakao.maps.Polyline({
+        path,
+        strokeWeight: 4,
         strokeColor: '#3B6EF5',
-        strokeOpacity: 0.85,
+        strokeOpacity: 0.9,
         strokeStyle: 'solid'
       });
-      _kkPolyline.setMap(_kkMap);
+      line.setMap(_kkMap);
+      _kkPolylines.push(line);
     }
 
-    // ── fit bounds ──
+    // ── fit bounds to all road points ──
     const bounds = new kakao.maps.LatLngBounds();
     kakaoPoints.forEach(p => bounds.extend(p));
-    _kkMap.setBounds(bounds, 60, 60, 60, 60);
+    // also extend to road geometry for better fit
+    segmentPaths.forEach(path => {
+      if (path) path.forEach(p => bounds.extend(new kakao.maps.LatLng(p.lat, p.lng)));
+    });
+    _kkMap.setBounds(bounds, 70, 70, 100, 70);
 
     // ── trigger resize (map may have been hidden) ──
     kakao.maps.event.trigger(_kkMap, 'resize');
