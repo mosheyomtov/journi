@@ -841,69 +841,134 @@ body {
 .naver-btn:active { transform:scale(0.96); }
 
 /* ── Transport tabs ── */
-/* ── Transport tabs ── */
-.transport-tabs {
-  margin-top: 12px;
-  border-top: 1px solid var(--border);
-  padding-top: 10px;
-}
-.tt-seg {
+/* ── Segment connector (between event cards) ── */
+.seg-row {
   display: flex;
-  background: var(--surface-2);
-  border-radius: 10px;
-  padding: 3px;
-  gap: 2px;
-  margin-bottom: 10px;
+  align-items: center;
+  padding: 2px 0 2px 0;
+  position: relative;
 }
-.tt-tab {
+.seg-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   flex: 1;
-  padding: 7px 2px;
-  border: none;
-  background: transparent;
-  border-radius: 8px;
-  font-size: 11px;
-  font-weight: 600;
-  font-family: 'Inter', sans-serif;
-  color: var(--ink-3);
-  cursor: pointer;
-  transition: all .15s;
-  white-space: nowrap;
+  padding: 5px 0;
 }
-.tt-tab.active {
-  background: #fff;
-  color: var(--ink);
-  box-shadow: var(--sh-sm);
-}
-.tt-panel { display: none; }
-.tt-panel.show { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
-.tt-duration {
-  flex: 1;
-  font-size: 12px;
-  color: var(--ink-3);
-  font-style: italic;
-}
-/* App nav buttons */
-.nav-app-btn {
+.seg-mode-pill {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 9px 14px;
-  border-radius: 10px;
+  gap: 5px;
+  background: var(--surface-2);
   border: 1.5px solid var(--border);
-  background: #fff;
-  cursor: pointer;
+  border-radius: 20px;
+  padding: 5px 10px 5px 8px;
   font-size: 12px;
   font-weight: 600;
   font-family: 'Inter', sans-serif;
-  color: var(--ink);
-  transition: box-shadow .15s, transform .1s;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
   white-space: nowrap;
+}
+.seg-mode-pill:active { background: var(--surface-3); }
+.seg-mode-pill .smp-icon { font-size: 14px; }
+.seg-mode-pill .smp-chevron { font-size: 10px; color: var(--ink-4); margin-right: 2px; }
+.seg-dir-btn {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--brand);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  margin-right: auto;
+  padding: 4px 0;
+  white-space: nowrap;
+}
+/* ── Bottom drawers ── */
+.bottom-drawer {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 200;
+  background: #fff;
+  border-radius: 20px 20px 0 0;
+  padding: 12px 20px 32px;
+  box-shadow: 0 -8px 40px rgba(0,0,0,0.18);
+  transform: translateY(100%);
+  transition: transform .3s var(--ease);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.bottom-drawer.open { transform: translateY(0); }
+.drawer-handle {
+  width: 36px; height: 4px;
+  background: var(--border-2);
+  border-radius: 2px;
+  margin: 0 auto 16px;
+}
+.drawer-title {
+  font-size: 15px; font-weight: 700;
+  color: var(--ink);
+  text-align: center;
+  margin-bottom: 16px;
+}
+.drawer-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 199;
+  display: none;
+}
+.drawer-overlay.open { display: block; }
+/* Transport option rows inside drawer */
+.seg-opt-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  font-family: 'Inter', sans-serif;
+}
+.seg-opt-row:active { background: var(--surface-2); }
+.seg-opt-row.selected {
+  border-color: var(--brand);
+  background: var(--brand-light);
+}
+.seg-opt-icon { font-size: 20px; width: 28px; text-align: center; }
+.seg-opt-label { flex: 1; font-size: 14px; font-weight: 600; color: var(--ink); }
+.seg-opt-time { font-size: 13px; color: var(--ink-3); font-weight: 500; }
+/* Dir app rows */
+.dir-app-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  transition: background .15s;
+}
+.dir-app-row:active { background: var(--surface-2); }
+/* Nav app buttons (kept for possible reuse) */
+.nav-app-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 14px; border-radius: 10px;
+  border: 1.5px solid var(--border); background: #fff;
+  cursor: pointer; font-size: 12px; font-weight: 600;
+  font-family: 'Inter', sans-serif; color: var(--ink);
+  transition: box-shadow .15s, transform .1s; white-space: nowrap;
 }
 .nav-app-btn:active { transform: scale(0.97); box-shadow: var(--sh-sm); }
 .nav-app-btn svg { flex-shrink: 0; }
-/* Taxi panel: two buttons side by side */
-.tt-taxi-row { display: flex; gap: 8px; width: 100%; }
-.tt-taxi-row .nav-app-btn { flex: 1; justify-content: center; }
 .event-acts { display:flex; gap:7px; margin-top:12px; padding-top:12px; border-top:1px solid var(--border); }
 .ev-act {
   flex:1; padding:10px; border-radius:10px;
@@ -2084,53 +2149,19 @@ function renderSchedule(){
     renderKakaoRoute([]); // show empty map state
     return;
   }
-  const TRANSPORT_LABELS={walk:'🚶 הליכה',transit:'🚇 תחבורה ציבורית',car:'🚗 רכב פרטי',taxi:'🚕 מונית'};
-  body.innerHTML=dayEvs.map((ev,i)=>{
-    const evTitle=ev.title||ev.name||'—';
-    const evTime=ev.event_time||ev.time||'--:--';
-    const evCat=ev.category||ev.tag||'sight';
-    const evWarn=ev.warning_text||ev.warning||'';
-    const evTip=ev.tip_text||ev.tip||'';
-    const evTransport=ev.transport_mode||ev.how||'';
-    const evLat=ev.lat||'';const evLng=ev.lng||'';
-    const evPlaceName=ev.place_name_en||ev.place_name_ko||'';
-    const mapBtn=(evLat&&evLng)
-      ?`<button class="gmaps-btn" style="margin-top:8px" onclick="event.stopPropagation();openGoogleMapsLink(${evLat},${evLng},'${evPlaceName.replace(/'/g,"\\'")}')">🗺️ Google Maps</button>`
-      :'';
-    // Transport tabs — only for events with a preceding event on the same day
-    const hasPrev = i > 0;
-    const uid = ev.id.replace(/-/g,'').slice(0,8);
-    const eSafeName = evPlaceName.replace(/'/g,"\\'");
-    // SVG logos
-    const naverSvg=`<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect width="18" height="18" rx="4" fill="#03C75A"/><path d="M3.5 13.5V4.5H6.3L9.9 10V4.5H14.5V13.5H11.7L8.1 8V13.5H3.5Z" fill="white"/></svg>`;
-    const uberSvg=`<svg width="38" height="18" viewBox="0 0 38 18" fill="none"><rect width="38" height="18" rx="4" fill="#000"/><text x="19" y="13" text-anchor="middle" fill="white" font-size="10" font-weight="700" font-family="Arial,sans-serif" letter-spacing="0.5">UBER</text></svg>`;
-    const transportTabs = (hasPrev && evLat && evLng) ? `
-      <div class="transport-tabs" onclick="event.stopPropagation()">
-        <div class="tt-seg">
-          <button class="tt-tab active" onclick="selTransTab(this,'${uid}','walk')">🚶‍♂️ הליכה</button>
-          <button class="tt-tab" onclick="selTransTab(this,'${uid}','transit')">🚌 תחב"צ</button>
-          <button class="tt-tab" onclick="selTransTab(this,'${uid}','car')">🚗 רכב</button>
-          <button class="tt-tab" onclick="selTransTab(this,'${uid}','taxi')">🚕 מונית</button>
-        </div>
-        <div class="tt-panel show" id="ttp-${uid}-walk">
-          <span class="tt-duration">~זמן הליכה</span>
-          <button class="nav-app-btn" onclick="navNaver('walk',${evLat},${evLng},'${eSafeName}')">${naverSvg}נווט רגלית</button>
-        </div>
-        <div class="tt-panel" id="ttp-${uid}-transit">
-          <span class="tt-duration">~זמן נסיעה</span>
-          <button class="nav-app-btn" onclick="navNaver('public',${evLat},${evLng},'${eSafeName}')">${naverSvg}מסלול תחב"צ</button>
-        </div>
-        <div class="tt-panel" id="ttp-${uid}-car">
-          <span class="tt-duration">~זמן נסיעה</span>
-          <button class="nav-app-btn" onclick="navNaver('car',${evLat},${evLng},'${eSafeName}')">${naverSvg}נווט ברכב</button>
-        </div>
-        <div class="tt-panel" id="ttp-${uid}-taxi">
-          <div class="tt-taxi-row">
-            <button class="nav-app-btn" onclick="navUber(${evLat},${evLng},'${eSafeName}')">${uberSvg}</button>
-          </div>
-        </div>
-      </div>` : '';
-    return`<div class="tl-item" style="animation-delay:${i*.04}s">
+  // Build HTML: ev card, then connector to next event
+  body.innerHTML = dayEvs.map((ev, i) => {
+    const evTitle = ev.title||ev.name||'—';
+    const evTime  = ev.event_time||ev.time||'--:--';
+    const evCat   = ev.category||ev.tag||'sight';
+    const evLat   = ev.lat||'';
+    const evLng   = ev.lng||'';
+    const evPlaceName = ev.place_name_en||ev.place_name_ko||'';
+    const mapBtn = (evLat&&evLng)
+      ? `<button class="gmaps-btn" style="margin-top:8px" onclick="event.stopPropagation();openGoogleMapsLink(${evLat},${evLng},'${evPlaceName.replace(/'/g,"\\'")}')">🗺️ Google Maps</button>`
+      : '';
+
+    const evCard = `<div class="tl-item" style="animation-delay:${i*.04}s">
       <div class="tl-dot"></div>
       <div class="tl-card" onclick="toggleEv(this)">
         <div class="tl-top">
@@ -2143,7 +2174,6 @@ function renderSchedule(){
         <div class="tl-body">
           ${ev.description?`<div class="tl-desc">${ev.description}</div>`:''}
           ${mapBtn}
-          ${transportTabs}
           <div class="event-acts">
             <button class="ev-act edit" onclick="event.stopPropagation();openEditEvent('${ev.id}')">✏️ ערוך</button>
             <button class="ev-act del" onclick="event.stopPropagation();delEvById('${ev.id}')">🗑️ מחק</button>
@@ -2151,6 +2181,26 @@ function renderSchedule(){
         </div>
       </div>
     </div>`;
+
+    // Connector to next event
+    const nextEv = dayEvs[i + 1];
+    let connector = '';
+    if (nextEv) {
+      const uid = nextEv.id.replace(/-/g,'').slice(0,8);
+      const hasRoute = evLat && evLng && nextEv.lat && nextEv.lng;
+      connector = hasRoute ? `
+      <div class="seg-row" id="sr-${uid}" onclick="event.stopPropagation()">
+        <div class="seg-inner">
+          <button class="seg-mode-pill" id="smp-${uid}" onclick="openSegDrawer('${uid}')">
+            <span class="smp-icon" id="smi-${uid}">⏳</span>
+            <span id="smt-${uid}">מחשב...</span>
+            <span class="smp-chevron">▾</span>
+          </button>
+          <button class="seg-dir-btn" onclick="openDirDrawer('${uid}')">הוראות הגעה ›</button>
+        </div>
+      </div>` : `<div style="height:6px"></div>`;
+    }
+    return evCard + connector;
   }).join('');
   // Show markers immediately (straight lines), then loadRouteTimesForDay
   // redraws with real road geometry once API calls complete
@@ -2159,14 +2209,68 @@ function renderSchedule(){
 }
 window.toggleEv=el=>{el.classList.toggle('open');el.querySelector('.tl-body').classList.toggle('show');};
 
-window.selTransTab=function(btn,uid,mode){
-  const seg=btn.closest('.tt-seg');
-  seg.querySelectorAll('.tt-tab').forEach(t=>t.classList.remove('active'));
-  btn.classList.add('active');
-  const panels=btn.closest('.transport-tabs').querySelectorAll('.tt-panel');
-  panels.forEach(p=>p.classList.remove('show'));
-  const target=document.getElementById('ttp-'+uid+'-'+mode);
-  if(target)target.classList.add('show');
+// ── Segment transport drawer ──
+let _activeSegUid = null;
+
+window.openSegDrawer = function(uid) {
+  _activeSegUid = uid;
+  const d = _segData[uid];
+  const cur = d?.mode || 'car';
+  const opts = [
+    { mode:'walk',    icon:'🚶', label:'הליכה',       time: d?.times?.walking  || '—' },
+    { mode:'transit', icon:'🚇', label:'תחבורה ציבורית', time: d?.times?.transit || '—' },
+    { mode:'car',     icon:'🚗', label:'נסיעה ברכב',  time: d?.times?.driving  || '—' },
+  ];
+  document.getElementById('segDrawerBody').innerHTML = opts.map(o => `
+    <div class="seg-opt-row ${o.mode === cur ? 'selected' : ''}" onclick="setSegMode('${uid}','${o.mode}')">
+      <span class="seg-opt-icon">${o.icon}</span>
+      <span class="seg-opt-label">${o.label}</span>
+      <span class="seg-opt-time">${o.time}</span>
+    </div>`).join('');
+  document.getElementById('segDrawer').classList.add('open');
+  document.getElementById('segDrawerOverlay').classList.add('open');
+};
+window.closeSegDrawer = function() {
+  document.getElementById('segDrawer').classList.remove('open');
+  document.getElementById('segDrawerOverlay').classList.remove('open');
+};
+window.setSegMode = function(uid, mode) {
+  if (_segData[uid]) _segData[uid].mode = mode;
+  _updateSegUI(uid);
+  closeSegDrawer();
+  // Redraw map with updated mode colors
+  if (window._lastDayEvs) renderKakaoRoute(window._lastDayEvs, window._lastSegPaths);
+};
+
+// ── Directions app drawer ──
+let _activeDirUid = null;
+const naverSvg=`<svg width="20" height="20" viewBox="0 0 18 18" fill="none"><rect width="18" height="18" rx="4" fill="#03C75A"/><path d="M3.5 13.5V4.5H6.3L9.9 10V4.5H14.5V13.5H11.7L8.1 8V13.5H3.5Z" fill="white"/></svg>`;
+const uberSvgLg=`<svg width="48" height="20" viewBox="0 0 38 18" fill="none"><rect width="38" height="18" rx="4" fill="#000"/><text x="19" y="13" text-anchor="middle" fill="white" font-size="10" font-weight="700" font-family="Arial,sans-serif" letter-spacing="0.5">UBER</text></svg>`;
+
+window.openDirDrawer = function(uid) {
+  _activeDirUid = uid;
+  const d = _segData[uid];
+  const lat = d?.curr?.lat || '';
+  const lng = d?.curr?.lng || '';
+  const name = (d?.curr?.name || '').replace(/'/g,"\\'");
+  const mode = d?.mode || 'car';
+  const naverMode = mode === 'walk' ? 'walk' : mode === 'transit' ? 'public' : 'car';
+
+  document.getElementById('dirDrawerBody').innerHTML = `
+    <div class="dir-app-row" onclick="navNaver('${naverMode}',${lat||0},${lng||0},'${name}');closeDirDrawer()">
+      ${naverSvg}
+      <span>Naver Maps</span>
+    </div>
+    <div class="dir-app-row" onclick="navUber(${lat||0},${lng||0},'${name}');closeDirDrawer()">
+      ${uberSvgLg}
+      <span>Uber</span>
+    </div>`;
+  document.getElementById('dirDrawer').classList.add('open');
+  document.getElementById('dirDrawerOverlay').classList.add('open');
+};
+window.closeDirDrawer = function() {
+  document.getElementById('dirDrawer').classList.remove('open');
+  document.getElementById('dirDrawerOverlay').classList.remove('open');
 };
 
 // ── ROUTE TIME CALCULATION ──
@@ -2187,39 +2291,68 @@ async function calculateRouteTimes(origin, destination){
  * Builds the journeys array for the day and updates each event's transport panels.
  * journeys[i] = { origin:{lat,lng}, destination:{lat,lng}, uid }
  */
-async function loadRouteTimesForDay(dayEvs){
-  // segmentPaths[i] = drivingPath for segment i→i+1, null if no data
-  const segmentPaths = new Array(Math.max(0, dayEvs.length - 1)).fill(null);
+// Per-segment stored data: uid → { times, minutes, drivingPath, mode, prev, curr }
+const _segData = {};
 
-  for(let i=1;i<dayEvs.length;i++){
-    const prev=dayEvs[i-1], curr=dayEvs[i];
-    if(!prev.lat||!prev.lng||!curr.lat||!curr.lng)continue;
-    const uid=curr.id.replace(/-/g,'').slice(0,8);
-    const origin={lat:parseFloat(prev.lat),lng:parseFloat(prev.lng)};
-    const destination={lat:parseFloat(curr.lat),lng:parseFloat(curr.lng)};
-    _setDurations(uid,{walking:'⏳',transit:'⏳',driving:'⏳'});
-    try{
-      const data=await calculateRouteTimes(origin,destination);
-      _setDurations(uid,data);
-      if(data.drivingPath?.length) segmentPaths[i-1]=data.drivingPath;
-    }catch(e){
-      console.error('[route-times] error for uid',uid,e);
-      _setDurations(uid,{walking:'—',transit:'—',driving:'—'});
+function _pickBestMode(minutes) {
+  const { walking, transit, driving } = minutes;
+  if (walking !== null && walking <= 20) return 'walk';
+  if (transit !== null && transit <= (driving || 999) * 1.3) return 'transit';
+  return 'car';
+}
+
+const _SEG_ICON  = { walk: '🚶', transit: '🚇', car: '🚗' };
+const _SEG_LABEL = { walk: 'הליכה', transit: 'תח"צ', car: 'נסיעה' };
+
+function _updateSegUI(uid) {
+  const d = _segData[uid];
+  if (!d) return;
+  const mode = d.mode;
+  const timeStr = mode === 'walk' ? d.times.walking
+                : mode === 'transit' ? d.times.transit
+                : d.times.driving;
+  const iconEl = document.getElementById('smi-' + uid);
+  const textEl = document.getElementById('smt-' + uid);
+  if (iconEl) iconEl.textContent = _SEG_ICON[mode] || '🚗';
+  if (textEl) textEl.textContent = timeStr || '—';
+}
+
+async function loadRouteTimesForDay(dayEvs) {
+  const segmentPaths = new Array(Math.max(0, dayEvs.length - 1)).fill(null);
+  // Load all segments in parallel
+  await Promise.all(dayEvs.slice(1).map(async (curr, idx) => {
+    const prev = dayEvs[idx];
+    if (!prev.lat||!prev.lng||!curr.lat||!curr.lng) return;
+    const uid = curr.id.replace(/-/g,'').slice(0,8);
+    const origin      = { lat: parseFloat(prev.lat), lng: parseFloat(prev.lng) };
+    const destination = { lat: parseFloat(curr.lat), lng: parseFloat(curr.lng) };
+    try {
+      const data = await calculateRouteTimes(origin, destination);
+      const bestMode = _pickBestMode(data.minutes || {});
+      _segData[uid] = {
+        times:       data,
+        minutes:     data.minutes || {},
+        drivingPath: data.drivingPath || null,
+        mode:        _segData[uid]?.mode || bestMode, // keep user override
+        prev:        { lat: origin.lat,      lng: origin.lng },
+        curr:        { lat: destination.lat, lng: destination.lng,
+                       name: curr.title||curr.name||'' }
+      };
+      if (data.drivingPath?.length) segmentPaths[idx] = data.drivingPath;
+      _updateSegUI(uid);
+    } catch(e) {
+      console.error('[route-times]', uid, e);
+      const iconEl = document.getElementById('smi-' + uid);
+      const textEl = document.getElementById('smt-' + uid);
+      if (iconEl) iconEl.textContent = '❓';
+      if (textEl) textEl.textContent = '—';
     }
-  }
-  // Redraw map with real road geometry
+  }));
+  // Redraw map with real road geometry + per-segment mode colors
   renderKakaoRoute(dayEvs, segmentPaths);
 }
 
-function _setDurations(uid,{walking,transit,driving}){
-  const set=(panelId,text)=>{
-    const el=document.getElementById(panelId);
-    if(el)el.querySelector('.tt-duration').textContent=text;
-  };
-  set(`ttp-${uid}-walk`, walking);
-  set(`ttp-${uid}-transit`, transit);
-  set(`ttp-${uid}-car`, driving);
-}
+// _setDurations removed — replaced by _updateSegUI + _segData
 
 function _deepLink(appUri,webUri){
   const t=setTimeout(()=>window.open(webUri,'_blank'),1500);
@@ -2383,8 +2516,13 @@ function _initKakaoMap() {
   });
 }
 
-// segmentPaths: array of [{lat,lng}] per segment — null = use straight line
+const _MODE_COLOR  = { walk: '#22C55E', transit: '#8B5CF6', car: '#3B6EF5' };
+const _MODE_STYLE  = { walk: 'dashed',  transit: 'solid',   car: 'solid'   };
+
+// segmentPaths: array of [{lat,lng}] per segment — null = straight line fallback
 function renderKakaoRoute(dayEvs, segmentPaths = []) {
+  window._lastDayEvs  = dayEvs;
+  window._lastSegPaths = segmentPaths;
   const pts = dayEvs.filter(e => e.lat && e.lng);
   const emptyEl = document.getElementById('dayMapEmpty');
 
@@ -2419,19 +2557,26 @@ function renderKakaoRoute(dayEvs, segmentPaths = []) {
       _kkOverlays.push(overlay);
     });
 
-    // ── polylines per segment (real road or straight fallback) ──
+    // ── polylines per segment ──
     for (let i = 0; i < kakaoPoints.length - 1; i++) {
-      const roadPath = segmentPaths[i];
+      const nextEv  = pts[i + 1];
+      const uid     = nextEv?.id?.replace(/-/g,'').slice(0,8);
+      const mode    = (_segData[uid]?.mode) || 'car';
+      const color   = _MODE_COLOR[mode]  || '#3B6EF5';
+      const style   = _MODE_STYLE[mode]  || 'solid';
+
+      // For walking: straight line (no driving path); transit: straight; car: real roads
+      const roadPath = (mode === 'car') ? segmentPaths[i] : null;
       const path = roadPath && roadPath.length > 1
         ? roadPath.map(p => new kakao.maps.LatLng(p.lat, p.lng))
-        : [kakaoPoints[i], kakaoPoints[i + 1]]; // straight-line fallback
+        : [kakaoPoints[i], kakaoPoints[i + 1]];
 
       const line = new kakao.maps.Polyline({
         path,
-        strokeWeight: 4,
-        strokeColor: '#3B6EF5',
+        strokeWeight: mode === 'walk' ? 3 : 4,
+        strokeColor: color,
         strokeOpacity: 0.9,
-        strokeStyle: 'solid'
+        strokeStyle: style
       });
       line.setMap(_kkMap);
       _kkPolylines.push(line);
@@ -2769,5 +2914,21 @@ function initReveal(){
 }
 window.initReveal=initReveal;
 </script>
+
+<!-- ════════ SEGMENT TRANSPORT DRAWER ════════ -->
+<div class="drawer-overlay" id="segDrawerOverlay" onclick="closeSegDrawer()"></div>
+<div class="bottom-drawer" id="segDrawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-title">בחר אמצעי תחבורה</div>
+  <div id="segDrawerBody"></div>
+</div>
+
+<!-- ════════ DIRECTIONS APP DRAWER ════════ -->
+<div class="drawer-overlay" id="dirDrawerOverlay" onclick="closeDirDrawer()"></div>
+<div class="bottom-drawer" id="dirDrawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-title">הוראות הגעה</div>
+  <div id="dirDrawerBody"></div>
+</div>
 </body>
 </html>

@@ -36,8 +36,9 @@ serve(async (req) => {
     if (!summary) throw new Error(`Kakao no route: ${JSON.stringify(kakaoData)}`);
 
     const drivingSecs: number = summary.duration;
-    const roadKm: number = summary.distance / 1000;
-    const driving = fmt(drivingSecs / 60);
+    const roadKm: number     = summary.distance / 1000;
+    const drivingMin         = drivingSecs / 60;
+    const driving            = fmt(drivingMin);
 
     // ── Extract road geometry (vertexes = [lng,lat,lng,lat,...]) ──
     const drivingPath: {lat: number; lng: number}[] = [];
@@ -54,6 +55,9 @@ serve(async (req) => {
     // ── 2. ODsay → real transit time + pointDistance for walking ──
     let transit: string;
     let walking: string;
+    let walkingMin: number;
+    let transitMin: number | null = null;
+
     try {
       const odsayUrl =
         `https://api.odsay.com/v1/api/searchPubTransPathT` +
@@ -61,45 +65,50 @@ serve(async (req) => {
         `&EX=${destination.lng}&EY=${destination.lat}` +
         `&apiKey=${encodeURIComponent(ODSAY_KEY)}`;
 
-      const odsayRes = await fetch(odsayUrl, {
-        headers: { Referer: REFERER },
-      });
+      const odsayRes  = await fetch(odsayUrl, { headers: { Referer: REFERER } });
       const odsayData = await odsayRes.json();
-      const result = odsayData?.result;
+      const result    = odsayData?.result;
 
-      // ── Walking: pointDistance (straight-line meters) × 1.25 city-block factor ÷ 4.5 km/h
-      // pointDistance is more accurate than car road distance for pedestrian routing
+      // Walking: pointDistance (straight-line meters) × 1.25 city-block factor ÷ 4.5 km/h
       const straightM: number = result?.pointDistance ?? (roadKm * 1000 * 0.75);
-      const walkMin = (straightM * 1.25) / 4500 * 60;
-      walking = fmt(walkMin);
+      walkingMin = (straightM * 1.25) / 4500 * 60;
+      walking    = fmt(walkingMin);
 
-      // ── Transit: prefer subway (pathType=1), else best by totalTime ──
-      // pathType: 1=subway only, 2=bus only, 3=mixed subway+bus
-      const paths: any[] = result?.path ?? [];
-      const subwayPath = paths.find((p: any) => p.pathType === 1);
-      const bestPath = subwayPath ?? paths[0];
+      // Transit: prefer subway (pathType=1), else best by totalTime
+      // pathType: 1=subway only, 2=bus only, 3=mixed
+      const paths: any[]  = result?.path ?? [];
+      const subwayPath    = paths.find((p: any) => p.pathType === 1);
+      const bestPath      = subwayPath ?? paths[0];
       const rawMin: number | undefined = bestPath?.info?.totalTime;
+
       if (rawMin != null && typeof rawMin === "number") {
-        // Bus-only routes (pathType=2) use scheduled "best-case" wait times.
-        // Real headways on non-urban routes (e.g. Jeju) are 30-60 min,
-        // so multiply by 1.5 to approximate realistic total travel time.
-        const adjustedMin = bestPath.pathType === 2 ? rawMin * 1.5 : rawMin;
-        transit = fmt(adjustedMin);
+        // Bus-only routes: multiply by 1.5 for realistic wait time
+        const adjusted = bestPath.pathType === 2 ? rawMin * 1.5 : rawMin;
+        transitMin = Math.round(adjusted);
+        transit    = fmt(adjusted);
       } else {
         transit = "אין קו ישיר";
         console.warn("ODsay no path:", JSON.stringify(odsayData).slice(0, 200));
       }
     } catch (e) {
       console.error("ODsay error:", e);
-      // Fallback: haversine-based estimates
-      walking = fmt(roadKm * 0.75 / 4.5 * 60) + "*";
-      const fb = roadKm < 2 ? roadKm / 15 * 60 + 5
-        : roadKm < 10 ? roadKm / 30 * 60 + 8
-        : roadKm / 40 * 60 + 10;
-      transit = fmt(fb) + "*";
+      walkingMin = roadKm * 0.75 / 4.5 * 60;
+      walking    = fmt(walkingMin) + "*";
+      const fb   = roadKm < 2  ? roadKm / 15 * 60 + 5
+                 : roadKm < 10 ? roadKm / 30 * 60 + 8
+                 :               roadKm / 40 * 60 + 10;
+      transitMin = Math.round(fb);
+      transit    = fmt(fb) + "*";
     }
 
-    return new Response(JSON.stringify({ walking, transit, driving, drivingPath }), {
+    return new Response(JSON.stringify({
+      walking, transit, driving, drivingPath,
+      minutes: {
+        walking:  Math.round(walkingMin),
+        transit:  transitMin,
+        driving:  Math.round(drivingMin),
+      }
+    }), {
       headers: { ...CORS, "Content-Type": "application/json" },
     });
   } catch (e) {
