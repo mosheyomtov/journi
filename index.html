@@ -573,7 +573,7 @@ body {
 #screen-trip { background: var(--bg); }
 
 /* ── Kakao day map — top of trip screen ── */
-#screen-trip { flex-direction: column; }
+#screen-trip { flex-direction: column; position: relative; }
 
 #dayMapWrap {
   position: relative;
@@ -713,6 +713,43 @@ body {
 .qa-btn.primary { background: var(--brand); color: #fff; border-color: var(--brand); box-shadow: 0 4px 12px rgba(59,110,245,0.28); }
 .qa-btn.danger { background: var(--rose-light); color: var(--rose); border-color: rgba(244,63,94,0.2); }
 
+/* ── Trip bottom nav (floating) ── */
+.trip-bottom-nav {
+  position: absolute;
+  bottom: 20px; left: 50%; transform: translateX(-50%);
+  z-index: 150;
+  display: flex;
+  background: rgba(255,255,255,0.96);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 28px;
+  padding: 6px 8px;
+  gap: 4px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.14), 0 1px 4px rgba(0,0,0,0.08);
+  border: 1px solid rgba(255,255,255,0.7);
+  min-width: 240px;
+}
+.tbn-btn {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px;
+  padding: 8px 18px;
+  border-radius: 22px;
+  border: none; background: transparent;
+  cursor: pointer;
+  transition: background .18s, color .18s;
+  font-family: 'Inter', sans-serif;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.tbn-btn:active { transform: scale(0.95); }
+.tbn-btn.active {
+  background: var(--ink);
+  color: #fff;
+}
+.tbn-icon { font-size: 16px; line-height: 1; }
+.tbn-label { font-size: 11px; font-weight: 600; letter-spacing: -0.1px; }
+
 /* Tab nav */
 .tab-nav {
   display: flex;
@@ -736,7 +773,7 @@ body {
 .tn-btn:hover { color: var(--ink-2); }
 
 /* Tab content */
-.tab-pane { display:none; padding: 20px; padding-bottom: 100px; }
+.tab-pane { display:none; padding: 20px; padding-bottom: 120px; }
 .tab-pane.active { display:block; animation:fadeUp .3s var(--ease); }
 
 /* Day pills */
@@ -1599,12 +1636,6 @@ body {
     </div>
   </div>
 
-  <div class="tab-nav" id="tripTabNav">
-    <button class="tn-btn active" onclick="showTab('schedule',this)">📅 לוז</button>
-    <button class="tn-btn" onclick="showTab('notes',this)">📝 הערות</button>
-    <button class="tn-btn" onclick="showTab('share',this)">👥 שיתוף</button>
-  </div>
-
   <div style="overflow-y:auto;flex:1">
     <!-- SCHEDULE -->
     <div class="tab-pane active" id="tab-schedule">
@@ -1636,6 +1667,22 @@ body {
       </div>
     </div>
   </div>
+
+  <!-- ════ TRIP BOTTOM NAV ════ -->
+  <nav class="trip-bottom-nav" id="tripBottomNav">
+    <button class="tbn-btn active" id="tbn-schedule" onclick="showTripTab('schedule')">
+      <span class="tbn-icon">📅</span>
+      <span class="tbn-label">לוז</span>
+    </button>
+    <button class="tbn-btn" id="tbn-notes" onclick="showTripTab('notes')">
+      <span class="tbn-icon">📝</span>
+      <span class="tbn-label">תכנון</span>
+    </button>
+    <button class="tbn-btn" id="tbn-share" onclick="showTripTab('share')">
+      <span class="tbn-icon">👥</span>
+      <span class="tbn-label">שיתוף</span>
+    </button>
+  </nav>
 </div>
 
 <!-- ════════ ADMIN ════════ -->
@@ -2821,7 +2868,7 @@ window.saveNotes=async()=>{
   showToast('✓ הערות נשמרו');
 };
 window.copyLink=()=>{navigator.clipboard.writeText(document.getElementById('shareUrl').textContent).then(()=>showToast('✓ קישור הועתק!'));};
-window.doShareBtn=()=>showTabFn('share',document.querySelectorAll('.tn-btn')[2]);
+window.doShareBtn=()=>showTabFn('share');
 
 function renderCollabs(){
   const cl=CTrip?.collaborators||[];
@@ -2913,11 +2960,14 @@ window.showScreen=showScreen;
 
 function showTabFn(n,btn){
   document.querySelectorAll('.tab-pane').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.tn-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('tab-'+n).classList.add('active');
-  if(btn)btn.classList.add('active');
+  // update trip bottom nav
+  document.querySelectorAll('.tbn-btn').forEach(b=>b.classList.remove('active'));
+  const tbnBtn = document.getElementById('tbn-'+n);
+  if(tbnBtn) tbnBtn.classList.add('active');
 }
 window.showTab=showTabFn;
+window.showTripTab=showTabFn;
 
 function closeMenus(){} // kept for compatibility
 window.closeMenus=closeMenus;
