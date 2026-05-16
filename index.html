@@ -651,29 +651,30 @@ body {
   align-items: center; justify-content: center;
   gap: 6px; color: var(--ink-3); font-size: 13px;
 }
-/* Kakao custom pin — Journi branded, minimal */
+/* Kakao custom pin — Journi branded, navy */
 .kk-pin {
-  width: 28px; height: 28px; border-radius: 50%;
+  width: 30px; height: 30px; border-radius: 50%;
   background: #fff;
-  color: #1a1a2e;
+  color: #1D3557;
   display: flex; align-items: center; justify-content: center;
   font-size: 11px; font-weight: 800;
   font-family: 'Inter', sans-serif;
   letter-spacing: -0.3px;
-  border: 2px solid #1a1a2e;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.22);
+  border: 2.5px solid #1D3557;
+  box-shadow: 0 2px 12px rgba(29,53,87,0.32);
   cursor: pointer;
   transform: translate(-50%, -50%);
   transition: transform .15s;
 }
 .kk-pin.first {
-  background: #1a1a2e; color: #fff;
-  width: 32px; height: 32px; font-size: 13px;
-  border-color: #1a1a2e;
+  background: #1D3557; color: #fff;
+  width: 34px; height: 34px; font-size: 13px;
+  border-color: #1D3557;
+  box-shadow: 0 3px 14px rgba(29,53,87,0.42);
 }
 .kk-pin.last {
-  background: #fff; color: #1a1a2e;
-  border-color: #1a1a2e; opacity: 0.7;
+  background: #F7F9FC; color: #1D3557;
+  border-color: #1D3557; opacity: 0.75;
 }
 
 .trip-header-section {
@@ -908,26 +909,26 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: #F9FAFB;
-  border: 1px solid #E5E7EB;
+  background: #EEF2F8;
+  border: 1.5px solid #D2DAEA;
   border-radius: 20px;
   padding: 5px 12px 5px 10px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   font-family: 'Inter', sans-serif;
-  color: #374151;
+  color: #1D3557;
   cursor: pointer;
-  transition: background .15s;
+  transition: background .15s, border-color .15s;
   white-space: nowrap;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  box-shadow: 0 1px 3px rgba(29,53,87,0.08);
 }
-.seg-mode-pill:active { background: #F3F4F6; }
+.seg-mode-pill:active { background: #DDE6F0; }
 .seg-mode-pill .smp-icon { font-size: 13px; }
-.seg-mode-pill .smp-chevron { font-size: 9px; color: #9CA3AF; margin-right: 2px; }
+.seg-mode-pill .smp-chevron { font-size: 9px; color: #6B88A8; margin-right: 2px; }
 .seg-dir-btn {
   font-size: 12px;
   font-weight: 600;
-  color: #2563EB;
+  color: #1D3557;
   background: none;
   border: none;
   cursor: pointer;
@@ -936,6 +937,7 @@ body {
   padding: 4px 0;
   white-space: nowrap;
   letter-spacing: -0.1px;
+  opacity: 0.7;
 }
 /* ── Bottom drawers ── */
 .bottom-drawer {
@@ -987,8 +989,8 @@ body {
 }
 .seg-opt-row:active { background: #F3F4F6; }
 .seg-opt-row.selected {
-  border-color: #2563EB;
-  background: #EFF6FF;
+  border-color: #1D3557;
+  background: #EEF2F8;
 }
 .seg-opt-icon { font-size: 20px; width: 28px; text-align: center; }
 .seg-opt-label { flex: 1; font-size: 14px; font-weight: 600; color: #111827; letter-spacing: -0.2px; }
@@ -1035,18 +1037,18 @@ body {
   display:flex; align-items:center; justify-content:center; gap:5px;
 }
 .ev-act:active { transform:scale(0.96); }
-.ev-act.edit { color:#2563EB; background:#EFF6FF; }
+.ev-act.edit { color:#1D3557; background:#EEF2F8; }
 .ev-act.del  { color:#DC2626; background:#FEF2F2; }
 
 .add-event-btn {
   width:100%; padding:16px;
-  background:#fff; border:1.5px dashed #D1D5DB;
-  border-radius:16px; color:#9CA3AF;
+  background:#fff; border:1.5px dashed #B8C8DC;
+  border-radius:16px; color:#6B88A8;
   font-size:14px; font-weight:600;
   font-family:'Inter',sans-serif;
   cursor:pointer; margin-top:12px; transition:all .2s;
 }
-.add-event-btn:hover { border-color:var(--brand); color:var(--brand); background:var(--brand-light); }
+.add-event-btn:hover { border-color:#1D3557; color:#1D3557; background:#EEF2F8; }
 
 /* ── NOTES ── */
 .notes-textarea {
